@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="10.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.2" />
+    <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.1" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.2" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ProjetoEcommerce.Application\ProjetoEcommerce.Application.csproj" />
+    <ProjectReference Include="..\ProjetoEcommerce.Infra.Data\ProjetoEcommerce.Infra.Data.csproj" />
+    <ProjectReference Include="..\ProjetoEcommerce.Infra.MessageQueue\ProjetoEcommerce.Infra.MessageQueue.csproj" />
+    <ProjectReference Include="..\ProjetoEcommerce.Infra.Cache\ProjetoEcommerce.Infra.Cache.csproj" />
+    <ProjectReference Include="..\ProjetoEcommerce.Infra.Cloud\ProjetoEcommerce.Infra.Cloud.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,11 @@
+<Solution>
+  <Project Path="ProjetoEcommerce.Api/ProjetoEcommerce.Api.csproj" />
+  <Project Path="ProjetoEcommerce.Application/ProjetoEcommerce.Application.csproj" />
+  <Project Path="ProjetoEcommerce.Domain/ProjetoEcommerce.Domain.csproj" />
+  <Project Path="ProjetoEcommerce.Infra.Cache/ProjetoEcommerce.Infra.Cache.csproj" />
+  <Project Path="ProjetoEcommerce.Infra.Cloud/ProjetoEcommerce.Infra.Cloud.csproj" />
+  <Project Path="ProjetoEcommerce.Infra.Data/ProjetoEcommerce.Infra.Data.csproj" />
+  <Project Path="ProjetoEcommerce.Infra.IoC/ProjetoEcommerce.Infra.IoC.csproj" />
+  <Project Path="ProjetoEcommerce.Infra.MessageQueue/ProjetoEcommerce.Infra.MessageQueue.csproj" />
+  <Project Path="ProjetoEcommerce.Tests/ProjetoEcommerce.Tests.csproj" />
+</Solution>

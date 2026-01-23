@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AWSSDK.S3" Version="3.7.309" />
+    <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.7.309" />
+    <PackageReference Include="AWSSDK.Core" Version="3.7.309" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ProjetoEcommerce.Infra.MessageQueue\ProjetoEcommerce.Infra.MessageQueue.csproj" />
+  </ItemGroup>
+
+</Project>
