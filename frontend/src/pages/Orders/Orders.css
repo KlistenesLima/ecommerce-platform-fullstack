@@ -1,0 +1,121 @@
+.orders-page {
+  padding-top: calc(73px + var(--spacing-2xl));
+  padding-bottom: var(--spacing-3xl);
+  min-height: 100vh;
+}
+
+.orders-page h1 {
+  margin-bottom: var(--spacing-2xl);
+}
+
+.orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.order-card {
+  padding: var(--spacing-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  transition: var(--transition-fast);
+}
+
+.order-card:hover {
+  border-color: var(--primary);
+}
+
+.order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-md);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--border);
+}
+
+.order-id {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.order-date {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.order-status {
+  padding: var(--spacing-xs) var(--spacing-md);
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+}
+
+.order-status.delivered {
+  background: rgba(76, 175, 80, 0.2);
+  color: var(--success);
+}
+
+.order-status.shipping {
+  background: rgba(33, 150, 243, 0.2);
+  color: #2196F3;
+}
+
+.order-status.processing {
+  background: rgba(255, 152, 0, 0.2);
+  color: var(--warning);
+}
+
+.order-status.cancelled {
+  background: rgba(244, 67, 54, 0.2);
+  color: var(--danger);
+}
+
+.order-body {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.order-info {
+  display: flex;
+  gap: var(--spacing-xl);
+  color: var(--text-secondary);
+}
+
+.order-total {
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.empty-orders {
+  text-align: center;
+  padding: var(--spacing-3xl);
+}
+
+.empty-orders .empty-icon {
+  font-size: 4rem;
+  color: var(--text-muted);
+  margin-bottom: var(--spacing-lg);
+}
+
+.empty-orders h3 {
+  margin-bottom: var(--spacing-sm);
+}
+
+.empty-orders p {
+  color: var(--text-muted);
+  margin-bottom: var(--spacing-xl);
+}
+
+@media (max-width: 576px) {
+  .order-body {
+    flex-direction: column;
+    gap: var(--spacing-md);
+    align-items: flex-start;
+  }
+}
