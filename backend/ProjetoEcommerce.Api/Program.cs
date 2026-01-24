@@ -7,14 +7,7 @@ using ProjetoEcommerce.Infra.IoC;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ============================================
-// 1. CONFIGURATION
-// ============================================
 var configuration = builder.Configuration;
-
-// ============================================
-// 2. SERVICES REGISTRATION
-// ============================================
 
 // Infrastructure Layer (Database, Repositories, Cache, Cloud, Message Queue)
 builder.Services.AddInfrastructure(configuration);
@@ -25,9 +18,6 @@ builder.Services.AddApplication(configuration);
 // Authentication & Authorization (JWT)
 builder.Services.AddJwtAuthentication(configuration);
 
-// CORS Configuration
-builder.Services.AddCorsConfiguration(configuration);
-
 // API Controllers
 builder.Services.AddControllers();
 
@@ -37,39 +27,40 @@ builder.Services.AddSwaggerConfiguration();
 // Health Checks
 builder.Services.AddHealthChecks();
 
-// ============================================
-// 3. BUILD APPLICATION
-// ============================================
+// CORS - Simples para desenvolvimento, configurável para produção
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Development", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+
+    options.AddPolicy("Production", policy =>
+    {
+        policy.WithOrigins("https://seusite.com")
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials();
+    });
+});
+
 var app = builder.Build();
 
-// ============================================
-// 4. MIDDLEWARE PIPELINE
-// ============================================
-
-// Development-only middleware
 if (app.Environment.IsDevelopment())
 {
     app.UseSwaggerConfiguration();
     app.UseDeveloperExceptionPage();
 }
 
-// Security Headers
-app.UseHttpsRedirection();
-
-// CORS - must be before Auth
+// CORS - antes de Auth
 app.UseCors(app.Environment.IsDevelopment() ? "Development" : "Production");
 
-// Authentication & Authorization
+app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
-
-// Health Check endpoint
 app.MapHealthChecks("/health");
-
-// Map Controllers
 app.MapControllers();
 
-// ============================================
-// 5. RUN APPLICATION
-// ============================================
 app.Run();
