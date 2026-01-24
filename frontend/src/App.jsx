@@ -14,6 +14,8 @@ import Login from './pages/Auth/Login';
 import Register from './pages/Auth/Register';
 import Products from './pages/Products/Products';
 import ProductDetail from './pages/Products/ProductDetail';
+import Categories from './pages/Categories/Categories';
+import About from './pages/About/About';
 import Cart from './pages/Cart/Cart';
 import Checkout from './pages/Checkout/Checkout';
 import Orders from './pages/Orders/Orders';
@@ -56,6 +58,8 @@ function App() {
                   <Route path="/register" element={<Register />} />
                   <Route path="/products" element={<Products />} />
                   <Route path="/products/:id" element={<ProductDetail />} />
+                  <Route path="/categories" element={<Categories />} />
+                  <Route path="/about" element={<About />} />
                   <Route path="/cart" element={<Cart />} />
                   <Route path="/checkout" element={<Checkout />} />
                   <Route path="/orders" element={<Orders />} />
