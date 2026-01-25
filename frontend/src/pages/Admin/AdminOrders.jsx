@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { FiEye, FiCheck, FiX, FiTruck } from 'react-icons/fi';
+import api from '../../services/api';
 import { toast } from 'react-toastify';
 import './AdminPages.css';
 
@@ -15,29 +16,71 @@ const AdminOrders = () => {
   const loadOrders = async () => {
     try {
       setLoading(true);
-      // const data = await orderService.getAll();
-      setOrders([
-        { id: '001', customer: 'João Silva', email: 'joao@email.com', total: 1299.90, status: 'Pendente', date: '2026-01-23', items: 2 },
-        { id: '002', customer: 'Maria Santos', email: 'maria@email.com', total: 459.90, status: 'Processando', date: '2026-01-23', items: 1 },
-        { id: '003', customer: 'Pedro Costa', email: 'pedro@email.com', total: 789.90, status: 'Enviado', date: '2026-01-22', items: 3 },
-        { id: '004', customer: 'Ana Oliveira', email: 'ana@email.com', total: 189.90, status: 'Entregue', date: '2026-01-21', items: 1 },
-        { id: '005', customer: 'Carlos Lima', email: 'carlos@email.com', total: 349.90, status: 'Cancelado', date: '2026-01-20', items: 2 },
-      ]);
+      const response = await api.get('/orders');
+      setOrders(response.data || []);
+    } catch (error) {
+      console.error('Erro ao carregar pedidos:', error);
+      toast.error('Erro ao carregar pedidos');
+      setOrders([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const updateStatus = (id, newStatus) => {
-    setOrders(orders.map(o => o.id === id ? { ...o, status: newStatus } : o));
-    toast.success(`Pedido #${id} atualizado para ${newStatus}`);
+  const updateStatus = async (id, newStatus) => {
+    try {
+      await api.patch(`/orders/${id}/status`, { status: newStatus });
+      setOrders(orders.map(o => o.id === id ? { ...o, status: newStatus } : o));
+      toast.success(`Pedido atualizado para ${newStatus}`);
+    } catch (error) {
+      console.error('Erro ao atualizar:', error);
+      toast.error('Erro ao atualizar pedido');
+    }
   };
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price);
   };
 
-  const filtered = filter === 'all' ? orders : orders.filter(o => o.status === filter);
+  const formatDate = (date) => {
+    return new Date(date).toLocaleDateString('pt-BR');
+  };
+
+  const getStatusLabel = (status) => {
+    const map = {
+      'Pending': 'Pendente',
+      'Processing': 'Processando',
+      'Shipped': 'Enviado',
+      'Delivered': 'Entregue',
+      'Cancelled': 'Cancelado',
+      'Pendente': 'Pendente',
+      'Processando': 'Processando',
+      'Enviado': 'Enviado',
+      'Entregue': 'Entregue',
+      'Cancelado': 'Cancelado'
+    };
+    return map[status] || status;
+  };
+
+  const getStatusClass = (status) => {
+    const map = {
+      'Pending': 'pendente',
+      'Processing': 'processando',
+      'Shipped': 'enviado',
+      'Delivered': 'entregue',
+      'Cancelled': 'cancelado',
+      'Pendente': 'pendente',
+      'Processando': 'processando',
+      'Enviado': 'enviado',
+      'Entregue': 'entregue',
+      'Cancelado': 'cancelado'
+    };
+    return map[status] || 'pendente';
+  };
+
+  const filtered = filter === 'all' 
+    ? orders 
+    : orders.filter(o => getStatusLabel(o.status) === filter || o.status === filter);
 
   return (
     <div className="admin-page">
@@ -80,28 +123,28 @@ const AdminOrders = () => {
               <tr><td colSpan="7" className="center">Nenhum pedido encontrado</td></tr>
             ) : filtered.map(order => (
               <tr key={order.id}>
-                <td>#{order.id}</td>
+                <td>#{order.id?.substring(0, 8) || order.id}</td>
                 <td>
                   <div>
-                    <strong>{order.customer}</strong>
-                    <small style={{ display: 'block', color: 'var(--text-muted)' }}>{order.email}</small>
+                    <strong>{order.user?.firstName || order.customerName || 'N/A'} {order.user?.lastName || ''}</strong>
+                    <small style={{ display: 'block', color: 'var(--text-muted)' }}>{order.user?.email || order.email || ''}</small>
                   </div>
                 </td>
-                <td>{order.items}</td>
-                <td className="price">{formatPrice(order.total)}</td>
-                <td><span className={`badge ${order.status.toLowerCase()}`}>{order.status}</span></td>
-                <td>{order.date}</td>
+                <td>{order.items?.length || order.itemsCount || 0}</td>
+                <td className="price">{formatPrice(order.totalAmount || order.total || 0)}</td>
+                <td><span className={`badge ${getStatusClass(order.status)}`}>{getStatusLabel(order.status)}</span></td>
+                <td>{formatDate(order.createdAt || order.date)}</td>
                 <td>
                   <div className="actions">
                     <button className="btn-icon" title="Ver detalhes"><FiEye /></button>
-                    {order.status === 'Pendente' && (
+                    {(order.status === 'Pending' || order.status === 'Pendente') && (
                       <>
-                        <button onClick={() => updateStatus(order.id, 'Processando')} className="btn-icon edit" title="Processar"><FiCheck /></button>
-                        <button onClick={() => updateStatus(order.id, 'Cancelado')} className="btn-icon delete" title="Cancelar"><FiX /></button>
+                        <button onClick={() => updateStatus(order.id, 'Processing')} className="btn-icon edit" title="Processar"><FiCheck /></button>
+                        <button onClick={() => updateStatus(order.id, 'Cancelled')} className="btn-icon delete" title="Cancelar"><FiX /></button>
                       </>
                     )}
-                    {order.status === 'Processando' && (
-                      <button onClick={() => updateStatus(order.id, 'Enviado')} className="btn-icon edit" title="Marcar como enviado"><FiTruck /></button>
+                    {(order.status === 'Processing' || order.status === 'Processando') && (
+                      <button onClick={() => updateStatus(order.id, 'Shipped')} className="btn-icon edit" title="Marcar como enviado"><FiTruck /></button>
                     )}
                   </div>
                 </td>

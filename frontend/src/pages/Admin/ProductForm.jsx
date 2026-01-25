@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { FiArrowLeft, FiSave, FiImage } from 'react-icons/fi';
-import { productService } from '../../services';
+import { FiArrowLeft, FiSave, FiImage, FiUpload, FiX } from 'react-icons/fi';
+import api from '../../services/api';
 import { toast } from 'react-toastify';
 import './AdminPages.css';
 
@@ -11,19 +11,14 @@ const ProductForm = () => {
   const isEditing = !!id;
 
   const [loading, setLoading] = useState(false);
-  const [categories] = useState([
-    { id: 1, name: 'Eletrônicos' },
-    { id: 2, name: 'Acessórios' },
-    { id: 3, name: 'Calçados' },
-    { id: 4, name: 'Bolsas' },
-    { id: 5, name: 'Perfumaria' },
-  ]);
+  const [uploading, setUploading] = useState(false);
+  const [categories, setCategories] = useState([]);
 
   const [form, setForm] = useState({
     name: '',
     description: '',
     price: '',
-    stock: '',
+    stockQuantity: '',
     sku: '',
     categoryId: '',
     imageUrl: '',
@@ -31,40 +26,86 @@ const ProductForm = () => {
   });
 
   useEffect(() => {
+    loadCategories();
     if (isEditing) loadProduct();
   }, [id]);
 
+  const loadCategories = async () => {
+    try {
+      const response = await api.get('/categories');
+      setCategories(response.data || []);
+    } catch (error) {
+      console.error('Erro ao carregar categorias:', error);
+      toast.error('Erro ao carregar categorias');
+    }
+  };
+
   const loadProduct = async () => {
     try {
-      const product = await productService.getById(id);
+      setLoading(true);
+      const response = await api.get(`/products/${id}`);
+      const product = response.data;
       setForm({
         name: product.name || '',
         description: product.description || '',
         price: product.price || '',
-        stock: product.stock || '',
+        stockQuantity: product.stockQuantity || product.stock || '',
         sku: product.sku || '',
         categoryId: product.categoryId || '',
         imageUrl: product.imageUrl || '',
         isActive: product.isActive ?? true
       });
     } catch (error) {
-      // Mock para edição
-      setForm({
-        name: 'Relógio Premium Gold',
-        description: 'Relógio de luxo com acabamento em ouro',
-        price: '1299.90',
-        stock: '15',
-        sku: 'REL-001',
-        categoryId: '2',
-        imageUrl: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400',
-        isActive: true
-      });
+      toast.error('Erro ao carregar produto');
+      navigate('/admin/products');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validar tipo
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Tipo de arquivo não permitido. Use: JPG, PNG, GIF ou WEBP');
+      return;
+    }
+
+    // Validar tamanho (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Arquivo muito grande. Máximo: 5MB');
+      return;
+    }
+
+    try {
+      setUploading(true);
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await api.post('/upload/image', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      setForm(prev => ({ ...prev, imageUrl: response.data.url }));
+      toast.success('Imagem enviada com sucesso!');
+    } catch (error) {
+      console.error('Erro no upload:', error);
+      toast.error('Erro ao enviar imagem');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeImage = () => {
+    setForm(prev => ({ ...prev, imageUrl: '' }));
   };
 
   const handleSubmit = async (e) => {
@@ -74,21 +115,35 @@ const ProductForm = () => {
       return;
     }
 
+    if (!form.categoryId) {
+      toast.error('Selecione uma categoria');
+      return;
+    }
+
     try {
       setLoading(true);
-      const data = { ...form, price: parseFloat(form.price), stock: parseInt(form.stock) || 0 };
-      
+      const data = {
+        name: form.name,
+        description: form.description,
+        price: parseFloat(form.price),
+        stockQuantity: parseInt(form.stockQuantity) || 0,
+        sku: form.sku,
+        categoryId: form.categoryId,
+        imageUrl: form.imageUrl,
+        isActive: form.isActive
+      };
+
       if (isEditing) {
-        await productService.update(id, data);
+        await api.put(`/products/${id}`, data);
         toast.success('Produto atualizado!');
       } else {
-        await productService.create(data);
+        await api.post('/products', data);
         toast.success('Produto criado!');
       }
       navigate('/admin/products');
     } catch (error) {
-      toast.success(isEditing ? 'Produto atualizado!' : 'Produto criado!');
-      navigate('/admin/products');
+      console.error('Erro ao salvar:', error);
+      toast.error(error.response?.data?.message || 'Erro ao salvar produto');
     } finally {
       setLoading(false);
     }
@@ -111,35 +166,83 @@ const ProductForm = () => {
               
               <div className="form-group">
                 <label>Nome do Produto *</label>
-                <input type="text" name="name" value={form.name} onChange={handleChange} className="form-control" required />
+                <input 
+                  type="text" 
+                  name="name" 
+                  value={form.name} 
+                  onChange={handleChange} 
+                  className="form-control" 
+                  placeholder="Ex: Relógio Premium Gold"
+                  required 
+                />
               </div>
 
               <div className="form-group">
                 <label>Descrição</label>
-                <textarea name="description" value={form.description} onChange={handleChange} className="form-control" rows="4" />
+                <textarea 
+                  name="description" 
+                  value={form.description} 
+                  onChange={handleChange} 
+                  className="form-control" 
+                  rows="4"
+                  placeholder="Descreva o produto..."
+                />
               </div>
 
               <div className="form-row">
                 <div className="form-group">
                   <label>Preço *</label>
-                  <input type="number" name="price" value={form.price} onChange={handleChange} className="form-control" step="0.01" min="0" required />
+                  <input 
+                    type="number" 
+                    name="price" 
+                    value={form.price} 
+                    onChange={handleChange} 
+                    className="form-control" 
+                    step="0.01" 
+                    min="0"
+                    placeholder="0.00"
+                    required 
+                  />
                 </div>
                 <div className="form-group">
                   <label>Estoque</label>
-                  <input type="number" name="stock" value={form.stock} onChange={handleChange} className="form-control" min="0" />
+                  <input 
+                    type="number" 
+                    name="stockQuantity" 
+                    value={form.stockQuantity} 
+                    onChange={handleChange} 
+                    className="form-control" 
+                    min="0"
+                    placeholder="0"
+                  />
                 </div>
               </div>
 
               <div className="form-row">
                 <div className="form-group">
                   <label>SKU</label>
-                  <input type="text" name="sku" value={form.sku} onChange={handleChange} className="form-control" />
+                  <input 
+                    type="text" 
+                    name="sku" 
+                    value={form.sku} 
+                    onChange={handleChange} 
+                    className="form-control"
+                    placeholder="Ex: PROD-001"
+                  />
                 </div>
                 <div className="form-group">
-                  <label>Categoria</label>
-                  <select name="categoryId" value={form.categoryId} onChange={handleChange} className="form-control">
+                  <label>Categoria *</label>
+                  <select 
+                    name="categoryId" 
+                    value={form.categoryId} 
+                    onChange={handleChange} 
+                    className="form-control"
+                    required
+                  >
                     <option value="">Selecione...</option>
-                    {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -148,21 +251,61 @@ const ProductForm = () => {
 
           <div className="form-side">
             <div className="form-section">
-              <h3>Imagem</h3>
-              <div className="image-preview">
+              <h3>Imagem do Produto</h3>
+              
+              <div className="image-upload-area">
                 {form.imageUrl ? (
-                  <img src={form.imageUrl} alt="Preview" />
+                  <div className="image-preview">
+                    <img src={form.imageUrl} alt="Preview" />
+                    <button type="button" className="remove-image" onClick={removeImage}>
+                      <FiX />
+                    </button>
+                  </div>
                 ) : (
-                  <div className="placeholder"><FiImage /><span>Sem imagem</span></div>
+                  <label className="upload-placeholder">
+                    <input 
+                      type="file" 
+                      accept="image/jpeg,image/png,image/gif,image/webp"
+                      onChange={handleImageUpload}
+                      disabled={uploading}
+                      hidden
+                    />
+                    {uploading ? (
+                      <>
+                        <div className="spinner-small"></div>
+                        <span>Enviando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FiUpload />
+                        <span>Clique para enviar imagem</span>
+                        <small>JPG, PNG, GIF ou WEBP até 5MB</small>
+                      </>
+                    )}
+                  </label>
                 )}
               </div>
+
               <div className="form-group">
-                <label>URL da Imagem</label>
-                <input type="url" name="imageUrl" value={form.imageUrl} onChange={handleChange} className="form-control" />
+                <label>Ou cole a URL da imagem</label>
+                <input 
+                  type="url" 
+                  name="imageUrl" 
+                  value={form.imageUrl} 
+                  onChange={handleChange} 
+                  className="form-control"
+                  placeholder="https://..."
+                />
               </div>
+
               <div className="form-group">
                 <label className="checkbox">
-                  <input type="checkbox" name="isActive" checked={form.isActive} onChange={handleChange} />
+                  <input 
+                    type="checkbox" 
+                    name="isActive" 
+                    checked={form.isActive} 
+                    onChange={handleChange} 
+                  />
                   Produto ativo
                 </label>
               </div>
@@ -172,8 +315,8 @@ const ProductForm = () => {
 
         <div className="form-actions">
           <Link to="/admin/products" className="btn btn-outline">Cancelar</Link>
-          <button type="submit" className="btn btn-primary" disabled={loading}>
-            <FiSave /> {loading ? 'Salvando...' : 'Salvar'}
+          <button type="submit" className="btn btn-primary" disabled={loading || uploading}>
+            <FiSave /> {loading ? 'Salvando...' : 'Salvar Produto'}
           </button>
         </div>
       </form>

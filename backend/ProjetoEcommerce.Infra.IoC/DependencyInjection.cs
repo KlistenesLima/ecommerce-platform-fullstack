@@ -1,6 +1,9 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Amazon;
+using Amazon.S3;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using ProjetoEcommerce.Application.Storage;
 using ProjetoEcommerce.Domain.Interfaces;
 using ProjetoEcommerce.Infra.Data.Context;
 using ProjetoEcommerce.Infra.Data.Repositories;
@@ -23,7 +26,7 @@ public static class DependencyInjection
         // Cache (Redis)
         services.AddCacheServices(configuration);
 
-        // Cloud Services (AWS)
+        // Cloud Services (AWS S3)
         services.AddCloudServices(configuration);
 
         // Message Queue (Kafka & RabbitMQ)
@@ -55,6 +58,7 @@ public static class DependencyInjection
     {
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();
+        services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IOrderRepository, OrderRepository>();
         services.AddScoped<ICartRepository, CartRepository>();
         services.AddScoped<IPaymentRepository, PaymentRepository>();
@@ -93,6 +97,26 @@ public static class DependencyInjection
         var awsSettings = new AWSSettings();
         configuration.GetSection("AWS").Bind(awsSettings);
         services.AddSingleton(awsSettings);
+
+        // Configure AWS S3
+        if (!string.IsNullOrEmpty(awsSettings.AccessKey) && !string.IsNullOrEmpty(awsSettings.SecretKey))
+        {
+            var s3Config = new AmazonS3Config
+            {
+                RegionEndpoint = RegionEndpoint.GetBySystemName(awsSettings.Region)
+            };
+
+            services.AddSingleton<IAmazonS3>(sp =>
+                new AmazonS3Client(awsSettings.AccessKey, awsSettings.SecretKey, s3Config));
+        }
+        else
+        {
+            // Usar credenciais do ambiente (IAM Role, etc)
+            services.AddSingleton<IAmazonS3>(sp =>
+                new AmazonS3Client(RegionEndpoint.GetBySystemName(awsSettings.Region)));
+        }
+
+        services.AddScoped<IS3StorageService, S3StorageService>();
 
         return services;
     }

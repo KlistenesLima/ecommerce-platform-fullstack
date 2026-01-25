@@ -1,9 +1,11 @@
-﻿using FluentValidation;
+using FluentValidation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using ProjetoEcommerce.Application.Auth.Services;
+using ProjetoEcommerce.Application.Categories.Services;
 using ProjetoEcommerce.Application.Orders.Services;
 using ProjetoEcommerce.Application.Payments.Services;
+using ProjetoEcommerce.Application.Products.Services;
 using ProjetoEcommerce.Application.Shipping.Services;
 using ProjetoEcommerce.Application.Users.Services;
 using System;
@@ -51,6 +53,8 @@ public static class ApplicationServiceExtensions
     private static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
         services.AddScoped<IUserService, UserService>();
+        services.AddScoped<IProductService, ProductService>();
+        services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<IOrderService, OrderService>();
         services.AddScoped<IPaymentService, PaymentService>();
         services.AddScoped<IShippingService, ShippingService>();

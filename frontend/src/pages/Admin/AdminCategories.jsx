@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { FiPlus, FiEdit2, FiTrash2, FiX } from 'react-icons/fi';
+import api from '../../services/api';
 import { toast } from 'react-toastify';
 import './AdminPages.css';
 
@@ -8,6 +9,7 @@ const AdminCategories = () => {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ name: '', description: '' });
 
   useEffect(() => {
@@ -17,15 +19,12 @@ const AdminCategories = () => {
   const loadCategories = async () => {
     try {
       setLoading(true);
-      // const data = await categoryService.getAll();
-      // setCategories(data);
-      setCategories([
-        { id: 1, name: 'Eletrônicos', description: 'Gadgets e dispositivos', productsCount: 12 },
-        { id: 2, name: 'Acessórios', description: 'Relógios, óculos e mais', productsCount: 18 },
-        { id: 3, name: 'Calçados', description: 'Tênis e sapatos', productsCount: 8 },
-        { id: 4, name: 'Bolsas', description: 'Bolsas e carteiras', productsCount: 6 },
-        { id: 5, name: 'Perfumaria', description: 'Perfumes e cosméticos', productsCount: 4 },
-      ]);
+      const response = await api.get('/categories');
+      setCategories(response.data || []);
+    } catch (error) {
+      console.error('Erro ao carregar categorias:', error);
+      toast.error('Erro ao carregar categorias');
+      setCategories([]);
     } finally {
       setLoading(false);
     }
@@ -50,20 +49,37 @@ const AdminCategories = () => {
       return;
     }
 
-    if (editing) {
-      setCategories(categories.map(c => c.id === editing.id ? { ...c, ...form } : c));
-      toast.success('Categoria atualizada!');
-    } else {
-      setCategories([...categories, { id: Date.now(), ...form, productsCount: 0 }]);
-      toast.success('Categoria criada!');
+    try {
+      setSaving(true);
+      if (editing) {
+        const response = await api.put(`/categories/${editing.id}`, form);
+        setCategories(categories.map(c => c.id === editing.id ? response.data : c));
+        toast.success('Categoria atualizada!');
+      } else {
+        const response = await api.post('/categories', form);
+        setCategories([...categories, response.data]);
+        toast.success('Categoria criada!');
+      }
+      closeModal();
+    } catch (error) {
+      console.error('Erro ao salvar:', error);
+      toast.error(error.response?.data?.message || 'Erro ao salvar categoria');
+    } finally {
+      setSaving(false);
     }
-    closeModal();
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (!window.confirm('Excluir categoria?')) return;
-    setCategories(categories.filter(c => c.id !== id));
-    toast.success('Categoria excluída!');
+    
+    try {
+      await api.delete(`/categories/${id}`);
+      setCategories(categories.filter(c => c.id !== id));
+      toast.success('Categoria excluída!');
+    } catch (error) {
+      console.error('Erro ao excluir:', error);
+      toast.error(error.response?.data?.message || 'Erro ao excluir categoria');
+    }
   };
 
   return (
@@ -81,12 +97,14 @@ const AdminCategories = () => {
       <div className="cards-grid">
         {loading ? (
           <p className="center">Carregando...</p>
+        ) : categories.length === 0 ? (
+          <p className="center">Nenhuma categoria cadastrada</p>
         ) : categories.map(category => (
           <div key={category.id} className="category-card">
             <div className="card-info">
               <h3>{category.name}</h3>
               <p>{category.description || 'Sem descrição'}</p>
-              <span className="count">{category.productsCount} produtos</span>
+              <span className="count">{category.productsCount || 0} produtos</span>
             </div>
             <div className="card-actions">
               <button onClick={() => openModal(category)} className="btn-icon edit"><FiEdit2 /></button>
@@ -112,6 +130,7 @@ const AdminCategories = () => {
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                   className="form-control"
+                  placeholder="Ex: Eletrônicos"
                   required
                 />
               </div>
@@ -122,11 +141,14 @@ const AdminCategories = () => {
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   className="form-control"
                   rows="3"
+                  placeholder="Descreva a categoria..."
                 />
               </div>
               <div className="modal-actions">
                 <button type="button" onClick={closeModal} className="btn btn-outline">Cancelar</button>
-                <button type="submit" className="btn btn-primary">{editing ? 'Atualizar' : 'Criar'}</button>
+                <button type="submit" className="btn btn-primary" disabled={saving}>
+                  {saving ? 'Salvando...' : editing ? 'Atualizar' : 'Criar'}
+                </button>
               </div>
             </form>
           </div>

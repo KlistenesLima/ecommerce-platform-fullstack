@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FiPlus, FiEdit2, FiTrash2, FiSearch } from 'react-icons/fi';
-import { productService } from '../../services';
+import api from '../../services/api';
 import { toast } from 'react-toastify';
 import './AdminPages.css';
 
@@ -17,16 +17,12 @@ const AdminProducts = () => {
   const loadProducts = async () => {
     try {
       setLoading(true);
-      const data = await productService.getAll();
-      setProducts(Array.isArray(data) ? data : data.items || []);
+      const response = await api.get('/products');
+      setProducts(response.data || []);
     } catch (error) {
-      // Mock data
-      setProducts([
-        { id: 1, name: 'Relógio Premium Gold', price: 1299.90, stock: 15, category: { name: 'Acessórios' }, imageUrl: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=100' },
-        { id: 2, name: 'Tênis Sport Elite', price: 459.90, stock: 28, category: { name: 'Calçados' }, imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=100' },
-        { id: 3, name: 'Bolsa Elegance', price: 789.90, stock: 8, category: { name: 'Bolsas' }, imageUrl: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=100' },
-        { id: 4, name: 'Óculos Aviator', price: 349.90, stock: 0, category: { name: 'Acessórios' }, imageUrl: 'https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=100' },
-      ]);
+      console.error('Erro ao carregar produtos:', error);
+      toast.error('Erro ao carregar produtos');
+      setProducts([]);
     } finally {
       setLoading(false);
     }
@@ -35,11 +31,11 @@ const AdminProducts = () => {
   const handleDelete = async (id) => {
     if (!window.confirm('Tem certeza que deseja excluir?')) return;
     try {
-      // await productService.delete(id);
+      await api.delete(`/products/${id}`);
       setProducts(products.filter(p => p.id !== id));
       toast.success('Produto excluído!');
     } catch (error) {
-      toast.error('Erro ao excluir');
+      toast.error('Erro ao excluir produto');
     }
   };
 
@@ -47,7 +43,9 @@ const AdminProducts = () => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price);
   };
 
-  const filtered = products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
+  const filtered = products.filter(p => 
+    p.name?.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <div className="admin-page">
@@ -95,11 +93,11 @@ const AdminProducts = () => {
                     <span>{product.name}</span>
                   </div>
                 </td>
-                <td>{product.category?.name || '-'}</td>
+                <td>{product.category?.name || product.categoryName || '-'}</td>
                 <td className="price">{formatPrice(product.price)}</td>
                 <td>
-                  <span className={`stock-badge ${product.stock === 0 ? 'out' : product.stock < 10 ? 'low' : 'ok'}`}>
-                    {product.stock}
+                  <span className={`stock-badge ${product.stockQuantity === 0 ? 'out' : product.stockQuantity < 10 ? 'low' : 'ok'}`}>
+                    {product.stockQuantity ?? product.stock ?? 0}
                   </span>
                 </td>
                 <td>
