@@ -103,7 +103,9 @@ namespace ProjetoEcommerce.Application.Products.Services
                 Sku = product.Sku,
                 ImageUrl = product.ImageUrl,
                 CreatedAt = product.CreatedAt,
-                IsActive = product.IsActive
+                IsActive = product.IsActive,
+                CategoryId = product.CategoryId,
+                CategoryName = product.Category?.Name ?? ""
             };
         }
     }

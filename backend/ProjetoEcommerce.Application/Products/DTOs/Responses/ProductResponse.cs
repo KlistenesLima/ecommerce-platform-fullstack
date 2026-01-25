@@ -1,4 +1,5 @@
 ﻿using System;
+
 namespace ProjetoEcommerce.Application.Products.DTOs.Responses
 {
     public class ProductResponse
@@ -12,5 +13,7 @@ namespace ProjetoEcommerce.Application.Products.DTOs.Responses
         public string ImageUrl { get; set; }
         public DateTime CreatedAt { get; set; }
         public bool IsActive { get; set; }
+        public Guid CategoryId { get; set; }
+        public string CategoryName { get; set; }
     }
 }
