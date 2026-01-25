@@ -2,7 +2,7 @@ using System;
 
 namespace ProjetoEcommerce.Application.Products.DTOs.Requests
 {
-    public class CreateProductRequest
+    public class UpdateProductRequest
     {
         public string Name { get; set; }
         public string Description { get; set; }
@@ -11,5 +11,6 @@ namespace ProjetoEcommerce.Application.Products.DTOs.Requests
         public string Sku { get; set; }
         public Guid CategoryId { get; set; }
         public string ImageUrl { get; set; }
+        public bool IsActive { get; set; }
     }
 }
