@@ -28,58 +28,66 @@ import Dashboard from './pages/Admin/Dashboard';
 import AdminProducts from './pages/Admin/AdminProducts';
 import ProductForm from './pages/Admin/ProductForm';
 import AdminCategories from './pages/Admin/AdminCategories';
+import CategoryForm from './pages/Admin/CategoryForm'; // <--- IMPORTADO AQUI
 import AdminOrders from './pages/Admin/AdminOrders';
 import AdminUsers from './pages/Admin/AdminUsers';
 
 function App() {
-  return (
-    <Router>
-      <AuthProvider>
-        <CartProvider>
-          <Routes>
-            {/* Admin Routes - Sem Header/Footer da loja */}
-            <Route path="/admin" element={<AdminLayout />}>
-              <Route index element={<Dashboard />} />
-              <Route path="products" element={<AdminProducts />} />
-              <Route path="products/new" element={<ProductForm />} />
-              <Route path="products/:id/edit" element={<ProductForm />} />
-              <Route path="categories" element={<AdminCategories />} />
-              <Route path="orders" element={<AdminOrders />} />
-              <Route path="users" element={<AdminUsers />} />
-            </Route>
+    return (
+        <Router>
+            <AuthProvider>
+                <CartProvider>
+                    <Routes>
+                        {/* Admin Routes - Sem Header/Footer da loja */}
+                        <Route path="/admin" element={<AdminLayout />}>
+                            <Route index element={<Dashboard />} />
 
-            {/* Store Routes - Com Header/Footer */}
-            <Route path="/*" element={
-              <div className="app">
-                <Header />
-                <Routes>
-                  <Route path="/" element={<Home />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/register" element={<Register />} />
-                  <Route path="/products" element={<Products />} />
-                  <Route path="/products/:id" element={<ProductDetail />} />
-                  <Route path="/categories" element={<Categories />} />
-                  <Route path="/about" element={<About />} />
-                  <Route path="/cart" element={<Cart />} />
-                  <Route path="/checkout" element={<Checkout />} />
-                  <Route path="/orders" element={<Orders />} />
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-                <Footer />
-              </div>
-            } />
-          </Routes>
-          <ToastContainer
-            position="top-right"
-            autoClose={3000}
-            hideProgressBar={false}
-            theme="dark"
-          />
-        </CartProvider>
-      </AuthProvider>
-    </Router>
-  );
+                            {/* Rotas de Produtos */}
+                            <Route path="products" element={<AdminProducts />} />
+                            <Route path="products/new" element={<ProductForm />} />
+                            <Route path="products/:id/edit" element={<ProductForm />} />
+
+                            {/* Rotas de Categorias (ATUALIZADO) */}
+                            <Route path="categories" element={<AdminCategories />} />
+                            <Route path="categories/new" element={<CategoryForm />} />
+                            <Route path="categories/:id/edit" element={<CategoryForm />} />
+
+                            <Route path="orders" element={<AdminOrders />} />
+                            <Route path="users" element={<AdminUsers />} />
+                        </Route>
+
+                        {/* Store Routes - Com Header/Footer */}
+                        <Route path="/*" element={
+                            <div className="app">
+                                <Header />
+                                <Routes>
+                                    <Route path="/" element={<Home />} />
+                                    <Route path="/login" element={<Login />} />
+                                    <Route path="/register" element={<Register />} />
+                                    <Route path="/products" element={<Products />} />
+                                    <Route path="/products/:id" element={<ProductDetail />} />
+                                    <Route path="/categories" element={<Categories />} />
+                                    <Route path="/about" element={<About />} />
+                                    <Route path="/cart" element={<Cart />} />
+                                    <Route path="/checkout" element={<Checkout />} />
+                                    <Route path="/orders" element={<Orders />} />
+                                    <Route path="/profile" element={<Profile />} />
+                                    <Route path="*" element={<NotFound />} />
+                                </Routes>
+                                <Footer />
+                            </div>
+                        } />
+                    </Routes>
+                    <ToastContainer
+                        position="top-right"
+                        autoClose={3000}
+                        hideProgressBar={false}
+                        theme="dark"
+                    />
+                </CartProvider>
+            </AuthProvider>
+        </Router>
+    );
 }
 
 export default App;

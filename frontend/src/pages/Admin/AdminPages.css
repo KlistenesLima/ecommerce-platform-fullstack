@@ -379,3 +379,57 @@
   .form-grid { grid-template-columns: 1fr; }
   .form-row { grid-template-columns: 1fr; }
 }
+
+/* ... Mantenha o código anterior e adicione isso no final ... */
+
+/* === Customização do Modal Admin === */
+.admin-modal .modal-content {
+    border: none;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.admin-modal .modal-header {
+    border-bottom: 1px solid var(--border);
+    padding: var(--spacing-lg);
+    background-color: var(--surface);
+}
+
+.admin-modal .modal-title {
+    font-weight: 600;
+    font-size: 1.25rem;
+    color: var(--text-primary);
+}
+
+.admin-modal .modal-body {
+    padding: var(--spacing-xl);
+}
+
+.admin-modal .modal-footer {
+    border-top: 1px solid var(--border);
+    padding: var(--spacing-lg);
+    background-color: var(--surface-light);
+}
+
+/* Inputs dentro do modal para ficarem iguais ao Search Box */
+.admin-modal input.form-control,
+.admin-modal textarea.form-control {
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    font-size: 0.95rem;
+}
+
+    .admin-modal input.form-control:focus,
+    .admin-modal textarea.form-control:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(201, 169, 98, 0.1); /* Ajuste para a cor do seu tema */
+    }
+
+.admin-modal label {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
