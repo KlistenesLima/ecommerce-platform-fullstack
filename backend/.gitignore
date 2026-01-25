@@ -1,0 +1,55 @@
+﻿# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio cache/options
+.vs/
+.vscode/
+
+# User-specific files
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+
+# NuGet
+*.nupkg
+.nuget/
+
+# Entity Framework
+*.db
+*.db-shm
+*.db-wal
+Migrations/
+
+# ReSharper
+.idea/
+*.sln.iml
+
+# Rider
+.idea/
+*.sln.iml
+
+# Environment variables
+.env
+.env.local
+appsettings.local.json
+
+# Docker
+docker-compose.override.yml
+
+# OS
+.DS_Store
+Thumbs.db
