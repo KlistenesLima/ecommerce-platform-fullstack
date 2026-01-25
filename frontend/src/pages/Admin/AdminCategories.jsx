@@ -1,22 +1,21 @@
 import { useState, useEffect } from 'react';
-import { Container, Table, Button, Modal, Form, Spinner, Row, Col, Card } from 'react-bootstrap';
-import { FiPlus, FiEdit2, FiTrash2 } from 'react-icons/fi';
+import { FiPlus, FiEdit2, FiTrash2, FiSearch } from 'react-icons/fi';
+import { Modal, Button, Form } from 'react-bootstrap'; // Usamos apenas o Modal do Bootstrap para funcionalidade
+import api from '../../services/api';
 import { toast } from 'react-toastify';
-import categoryService from '../../services/categoryService';
+import './AdminPages.css';
 
 const AdminCategories = () => {
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState('');
+
+    // Estado do Modal
     const [showModal, setShowModal] = useState(false);
-    const [saving, setSaving] = useState(false);
-
-    // Estado para controlar edição (null = criando, objeto = editando)
     const [editingCategory, setEditingCategory] = useState(null);
+    const [saving, setSaving] = useState(false);
+    const [form, setForm] = useState({ name: '', description: '' });
 
-    // Estado do formulário
-    const [formData, setFormData] = useState({ name: '', description: '' });
-
-    // Carregar categorias ao iniciar
     useEffect(() => {
         loadCategories();
     }, []);
@@ -24,191 +23,185 @@ const AdminCategories = () => {
     const loadCategories = async () => {
         try {
             setLoading(true);
-            const data = await categoryService.getAll();
-            setCategories(Array.isArray(data) ? data : []);
+            // Usando api direta para manter consistência com o seu padrão, 
+            // ou use categoryService se preferir a refatoração anterior.
+            const response = await api.get('/categories');
+            setCategories(response.data || []);
         } catch (error) {
             console.error('Erro ao carregar categorias:', error);
-            toast.error('Erro ao carregar a lista de categorias.');
+            toast.error('Erro ao carregar categorias');
+            setCategories([]);
         } finally {
             setLoading(false);
         }
     };
 
-    // Abrir modal (Limpa se for criar, preenche se for editar)
-    const handleShow = (category = null) => {
-        if (category) {
-            setEditingCategory(category);
-            setFormData({
-                name: category.name,
-                description: category.description || ''
-            });
-        } else {
-            setEditingCategory(null);
-            setFormData({ name: '', description: '' });
-        }
+    // Filtragem local
+    const filtered = categories.filter(c =>
+        c.name?.toLowerCase().includes(search.toLowerCase())
+    );
+
+    // --- Lógica do Modal ---
+    const handleOpenModal = (category = null) => {
+        setEditingCategory(category);
+        setForm(category ? { name: category.name, description: category.description || '' } : { name: '', description: '' });
         setShowModal(true);
     };
 
-    const handleClose = () => setShowModal(false);
+    const handleCloseModal = () => {
+        setShowModal(false);
+        setEditingCategory(null);
+        setForm({ name: '', description: '' });
+    };
 
-    // Enviar formulário (Criar ou Editar)
     const handleSubmit = async (e) => {
         e.preventDefault();
-
-        if (!formData.name.trim()) {
-            toast.warning('O nome da categoria é obrigatório.');
+        if (!form.name.trim()) {
+            toast.warn('O nome da categoria é obrigatório');
             return;
         }
 
         try {
             setSaving(true);
-
             if (editingCategory) {
-                // Atualizar
-                const updated = await categoryService.update(editingCategory.id, formData);
-                setCategories(categories.map(cat => cat.id === editingCategory.id ? updated : cat));
-                toast.success('Categoria atualizada com sucesso!');
+                // Editar
+                const response = await api.put(`/categories/${editingCategory.id}`, form);
+                setCategories(categories.map(c => c.id === editingCategory.id ? response.data : c));
+                toast.success('Categoria atualizada!');
             } else {
                 // Criar
-                const created = await categoryService.create(formData);
-                setCategories([...categories, created]);
-                toast.success('Categoria criada com sucesso!');
+                const response = await api.post('/categories', form);
+                setCategories([...categories, response.data]);
+                toast.success('Categoria criada!');
             }
-
-            handleClose();
+            handleCloseModal();
         } catch (error) {
-            console.error(error);
-            toast.error(error.response?.data?.message || 'Erro ao salvar categoria.');
+            console.error('Erro ao salvar:', error);
+            toast.error(error.response?.data?.message || 'Erro ao salvar categoria');
         } finally {
             setSaving(false);
         }
     };
 
-    // Deletar categoria
     const handleDelete = async (id) => {
-        if (window.confirm('Tem certeza que deseja excluir esta categoria?')) {
-            try {
-                await categoryService.delete(id);
-                setCategories(categories.filter(cat => cat.id !== id));
-                toast.success('Categoria excluída.');
-            } catch (error) {
-                console.error(error);
-                toast.error('Erro ao excluir categoria.');
-            }
+        if (!window.confirm('Tem certeza que deseja excluir esta categoria?')) return;
+
+        try {
+            await api.delete(`/categories/${id}`);
+            setCategories(categories.filter(c => c.id !== id));
+            toast.success('Categoria excluída!');
+        } catch (error) {
+            console.error('Erro ao excluir:', error);
+            toast.error('Erro ao excluir categoria');
         }
     };
 
     return (
-        <Container fluid className="p-4">
-            <div className="d-flex justify-content-between align-items-center mb-4">
-                <h2>Gerenciar Categorias</h2>
-                <Button variant="primary" onClick={() => handleShow()}>
-                    <FiPlus className="me-2" /> Nova Categoria
-                </Button>
+        <div className="admin-page">
+            {/* Cabeçalho igual ao de Produtos */}
+            <div className="page-header">
+                <div>
+                    <h1>Categorias</h1>
+                    <p>{categories.length} categorias cadastradas</p>
+                </div>
+                <button onClick={() => handleOpenModal()} className="btn btn-primary">
+                    <FiPlus /> Nova Categoria
+                </button>
             </div>
 
-            {loading ? (
-                <div className="text-center mt-5">
-                    <Spinner animation="border" variant="primary" />
-                </div>
-            ) : (
-                <Card className="shadow-sm">
-                    <Card.Body className="p-0">
-                        <Table responsive hover className="mb-0 align-middle">
-                            <thead className="bg-light">
-                                <tr>
-                                    <th className="ps-4">Nome</th>
-                                    <th>Descrição</th>
-                                    <th className="text-end pe-4">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {categories.length > 0 ? (
-                                    categories.map((category) => (
-                                        <tr key={category.id}>
-                                            <td className="ps-4 fw-bold">{category.name}</td>
-                                            <td>{category.description || <em className="text-muted">Sem descrição</em>}</td>
-                                            <td className="text-end pe-4">
-                                                <Button
-                                                    variant="outline-primary"
-                                                    size="sm"
-                                                    className="me-2"
-                                                    onClick={() => handleShow(category)}
-                                                >
-                                                    <FiEdit2 />
-                                                </Button>
-                                                <Button
-                                                    variant="outline-danger"
-                                                    size="sm"
-                                                    onClick={() => handleDelete(category.id)}
-                                                >
-                                                    <FiTrash2 />
-                                                </Button>
-                                            </td>
-                                        </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan="3" className="text-center py-4 text-muted">
-                                            Nenhuma categoria encontrada.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </Table>
-                    </Card.Body>
-                </Card>
-            )}
+            {/* Barra de Busca igual ao de Produtos */}
+            <div className="search-box">
+                <FiSearch />
+                <input
+                    type="text"
+                    placeholder="Buscar categorias..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                />
+            </div>
 
-            {/* MODAL DE CADASTRO/EDIÇÃO */}
-            <Modal show={showModal} onHide={handleClose} centered>
+            {/* Tabela com as mesmas classes de Produtos */}
+            <div className="table-container">
+                <table className="data-table">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Descrição</th>
+                            <th width="150">Produtos</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {loading ? (
+                            <tr><td colSpan="4" className="center">Carregando...</td></tr>
+                        ) : filtered.length === 0 ? (
+                            <tr><td colSpan="4" className="center">Nenhuma categoria encontrada</td></tr>
+                        ) : filtered.map(category => (
+                            <tr key={category.id}>
+                                <td>
+                                    <strong>{category.name}</strong>
+                                </td>
+                                <td>{category.description || '-'}</td>
+                                <td>
+                                    <span className="stock-badge ok">
+                                        {category.productsCount || 0}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div className="actions">
+                                        <button onClick={() => handleOpenModal(category)} className="btn-icon edit">
+                                            <FiEdit2 />
+                                        </button>
+                                        <button onClick={() => handleDelete(category.id)} className="btn-icon delete">
+                                            <FiTrash2 />
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            {/* Modal do React Bootstrap (Para funcionar corretamente o z-index/backdrop) */}
+            <Modal show={showModal} onHide={handleCloseModal} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>{editingCategory ? 'Editar Categoria' : 'Nova Categoria'}</Modal.Title>
+                </Modal.Header>
                 <Form onSubmit={handleSubmit}>
-                    <Modal.Header closeButton>
-                        <Modal.Title>{editingCategory ? 'Editar Categoria' : 'Nova Categoria'}</Modal.Title>
-                    </Modal.Header>
-
                     <Modal.Body>
-                        <Form.Group className="mb-3" controlId="categoryName">
-                            <Form.Label>Nome da Categoria</Form.Label>
+                        <Form.Group className="mb-3">
+                            <Form.Label>Nome *</Form.Label>
                             <Form.Control
                                 type="text"
+                                value={form.name}
+                                onChange={(e) => setForm({ ...form, name: e.target.value })}
                                 placeholder="Ex: Eletrônicos"
-                                value={formData.name}
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                 autoFocus
                             />
                         </Form.Group>
-
-                        <Form.Group className="mb-3" controlId="categoryDescription">
+                        <Form.Group className="mb-3">
                             <Form.Label>Descrição</Form.Label>
                             <Form.Control
                                 as="textarea"
                                 rows={3}
-                                placeholder="Breve descrição da categoria"
-                                value={formData.description}
-                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                value={form.description}
+                                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                                placeholder="Descreva a categoria..."
                             />
                         </Form.Group>
                     </Modal.Body>
-
                     <Modal.Footer>
-                        <Button variant="secondary" onClick={handleClose}>
+                        <Button variant="secondary" onClick={handleCloseModal}>
                             Cancelar
                         </Button>
                         <Button variant="primary" type="submit" disabled={saving}>
-                            {saving ? (
-                                <>
-                                    <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
-                                    Salvando...
-                                </>
-                            ) : (
-                                editingCategory ? 'Atualizar' : 'Criar'
-                            )}
+                            {saving ? 'Salvando...' : editingCategory ? 'Atualizar' : 'Criar'}
                         </Button>
                     </Modal.Footer>
                 </Form>
             </Modal>
-        </Container>
+        </div>
     );
 };
 
