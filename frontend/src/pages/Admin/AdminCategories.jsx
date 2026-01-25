@@ -1,161 +1,215 @@
 import { useState, useEffect } from 'react';
-import { FiPlus, FiEdit2, FiTrash2, FiX } from 'react-icons/fi';
-import api from '../../services/api';
+import { Container, Table, Button, Modal, Form, Spinner, Row, Col, Card } from 'react-bootstrap';
+import { FiPlus, FiEdit2, FiTrash2 } from 'react-icons/fi';
 import { toast } from 'react-toastify';
-import './AdminPages.css';
+import categoryService from '../../services/categoryService';
 
 const AdminCategories = () => {
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState(null);
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ name: '', description: '' });
+    const [categories, setCategories] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [showModal, setShowModal] = useState(false);
+    const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    loadCategories();
-  }, []);
+    // Estado para controlar edição (null = criando, objeto = editando)
+    const [editingCategory, setEditingCategory] = useState(null);
 
-  const loadCategories = async () => {
-    try {
-      setLoading(true);
-      const response = await api.get('/categories');
-      setCategories(response.data || []);
-    } catch (error) {
-      console.error('Erro ao carregar categorias:', error);
-      toast.error('Erro ao carregar categorias');
-      setCategories([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+    // Estado do formulário
+    const [formData, setFormData] = useState({ name: '', description: '' });
 
-  const openModal = (category = null) => {
-    setEditing(category);
-    setForm(category ? { name: category.name, description: category.description || '' } : { name: '', description: '' });
-    setModalOpen(true);
-  };
+    // Carregar categorias ao iniciar
+    useEffect(() => {
+        loadCategories();
+    }, []);
 
-  const closeModal = () => {
-    setModalOpen(false);
-    setEditing(null);
-    setForm({ name: '', description: '' });
-  };
+    const loadCategories = async () => {
+        try {
+            setLoading(true);
+            const data = await categoryService.getAll();
+            setCategories(Array.isArray(data) ? data : []);
+        } catch (error) {
+            console.error('Erro ao carregar categorias:', error);
+            toast.error('Erro ao carregar a lista de categorias.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!form.name.trim()) {
-      toast.error('Nome é obrigatório');
-      return;
-    }
+    // Abrir modal (Limpa se for criar, preenche se for editar)
+    const handleShow = (category = null) => {
+        if (category) {
+            setEditingCategory(category);
+            setFormData({
+                name: category.name,
+                description: category.description || ''
+            });
+        } else {
+            setEditingCategory(null);
+            setFormData({ name: '', description: '' });
+        }
+        setShowModal(true);
+    };
 
-    try {
-      setSaving(true);
-      if (editing) {
-        const response = await api.put(`/categories/${editing.id}`, form);
-        setCategories(categories.map(c => c.id === editing.id ? response.data : c));
-        toast.success('Categoria atualizada!');
-      } else {
-        const response = await api.post('/categories', form);
-        setCategories([...categories, response.data]);
-        toast.success('Categoria criada!');
-      }
-      closeModal();
-    } catch (error) {
-      console.error('Erro ao salvar:', error);
-      toast.error(error.response?.data?.message || 'Erro ao salvar categoria');
-    } finally {
-      setSaving(false);
-    }
-  };
+    const handleClose = () => setShowModal(false);
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Excluir categoria?')) return;
-    
-    try {
-      await api.delete(`/categories/${id}`);
-      setCategories(categories.filter(c => c.id !== id));
-      toast.success('Categoria excluída!');
-    } catch (error) {
-      console.error('Erro ao excluir:', error);
-      toast.error(error.response?.data?.message || 'Erro ao excluir categoria');
-    }
-  };
+    // Enviar formulário (Criar ou Editar)
+    const handleSubmit = async (e) => {
+        e.preventDefault();
 
-  return (
-    <div className="admin-page">
-      <div className="page-header">
-        <div>
-          <h1>Categorias</h1>
-          <p>{categories.length} categorias</p>
-        </div>
-        <button onClick={() => openModal()} className="btn btn-primary">
-          <FiPlus /> Nova Categoria
-        </button>
-      </div>
+        if (!formData.name.trim()) {
+            toast.warning('O nome da categoria é obrigatório.');
+            return;
+        }
 
-      <div className="cards-grid">
-        {loading ? (
-          <p className="center">Carregando...</p>
-        ) : categories.length === 0 ? (
-          <p className="center">Nenhuma categoria cadastrada</p>
-        ) : categories.map(category => (
-          <div key={category.id} className="category-card">
-            <div className="card-info">
-              <h3>{category.name}</h3>
-              <p>{category.description || 'Sem descrição'}</p>
-              <span className="count">{category.productsCount || 0} produtos</span>
+        try {
+            setSaving(true);
+
+            if (editingCategory) {
+                // Atualizar
+                const updated = await categoryService.update(editingCategory.id, formData);
+                setCategories(categories.map(cat => cat.id === editingCategory.id ? updated : cat));
+                toast.success('Categoria atualizada com sucesso!');
+            } else {
+                // Criar
+                const created = await categoryService.create(formData);
+                setCategories([...categories, created]);
+                toast.success('Categoria criada com sucesso!');
+            }
+
+            handleClose();
+        } catch (error) {
+            console.error(error);
+            toast.error(error.response?.data?.message || 'Erro ao salvar categoria.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // Deletar categoria
+    const handleDelete = async (id) => {
+        if (window.confirm('Tem certeza que deseja excluir esta categoria?')) {
+            try {
+                await categoryService.delete(id);
+                setCategories(categories.filter(cat => cat.id !== id));
+                toast.success('Categoria excluída.');
+            } catch (error) {
+                console.error(error);
+                toast.error('Erro ao excluir categoria.');
+            }
+        }
+    };
+
+    return (
+        <Container fluid className="p-4">
+            <div className="d-flex justify-content-between align-items-center mb-4">
+                <h2>Gerenciar Categorias</h2>
+                <Button variant="primary" onClick={() => handleShow()}>
+                    <FiPlus className="me-2" /> Nova Categoria
+                </Button>
             </div>
-            <div className="card-actions">
-              <button onClick={() => openModal(category)} className="btn-icon edit"><FiEdit2 /></button>
-              <button onClick={() => handleDelete(category.id)} className="btn-icon delete"><FiTrash2 /></button>
-            </div>
-          </div>
-        ))}
-      </div>
 
-      {/* Modal */}
-      {modalOpen && (
-        <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>{editing ? 'Editar Categoria' : 'Nova Categoria'}</h2>
-              <button onClick={closeModal} className="close-btn"><FiX /></button>
-            </div>
-            <form onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label>Nome *</label>
-                <input
-                  type="text"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="form-control"
-                  placeholder="Ex: Eletrônicos"
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Descrição</label>
-                <textarea
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  className="form-control"
-                  rows="3"
-                  placeholder="Descreva a categoria..."
-                />
-              </div>
-              <div className="modal-actions">
-                <button type="button" onClick={closeModal} className="btn btn-outline">Cancelar</button>
-                <button type="submit" className="btn btn-primary" disabled={saving}>
-                  {saving ? 'Salvando...' : editing ? 'Atualizar' : 'Criar'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+            {loading ? (
+                <div className="text-center mt-5">
+                    <Spinner animation="border" variant="primary" />
+                </div>
+            ) : (
+                <Card className="shadow-sm">
+                    <Card.Body className="p-0">
+                        <Table responsive hover className="mb-0 align-middle">
+                            <thead className="bg-light">
+                                <tr>
+                                    <th className="ps-4">Nome</th>
+                                    <th>Descrição</th>
+                                    <th className="text-end pe-4">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {categories.length > 0 ? (
+                                    categories.map((category) => (
+                                        <tr key={category.id}>
+                                            <td className="ps-4 fw-bold">{category.name}</td>
+                                            <td>{category.description || <em className="text-muted">Sem descrição</em>}</td>
+                                            <td className="text-end pe-4">
+                                                <Button
+                                                    variant="outline-primary"
+                                                    size="sm"
+                                                    className="me-2"
+                                                    onClick={() => handleShow(category)}
+                                                >
+                                                    <FiEdit2 />
+                                                </Button>
+                                                <Button
+                                                    variant="outline-danger"
+                                                    size="sm"
+                                                    onClick={() => handleDelete(category.id)}
+                                                >
+                                                    <FiTrash2 />
+                                                </Button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan="3" className="text-center py-4 text-muted">
+                                            Nenhuma categoria encontrada.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </Table>
+                    </Card.Body>
+                </Card>
+            )}
+
+            {/* MODAL DE CADASTRO/EDIÇÃO */}
+            <Modal show={showModal} onHide={handleClose} centered>
+                <Form onSubmit={handleSubmit}>
+                    <Modal.Header closeButton>
+                        <Modal.Title>{editingCategory ? 'Editar Categoria' : 'Nova Categoria'}</Modal.Title>
+                    </Modal.Header>
+
+                    <Modal.Body>
+                        <Form.Group className="mb-3" controlId="categoryName">
+                            <Form.Label>Nome da Categoria</Form.Label>
+                            <Form.Control
+                                type="text"
+                                placeholder="Ex: Eletrônicos"
+                                value={formData.name}
+                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                autoFocus
+                            />
+                        </Form.Group>
+
+                        <Form.Group className="mb-3" controlId="categoryDescription">
+                            <Form.Label>Descrição</Form.Label>
+                            <Form.Control
+                                as="textarea"
+                                rows={3}
+                                placeholder="Breve descrição da categoria"
+                                value={formData.description}
+                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                            />
+                        </Form.Group>
+                    </Modal.Body>
+
+                    <Modal.Footer>
+                        <Button variant="secondary" onClick={handleClose}>
+                            Cancelar
+                        </Button>
+                        <Button variant="primary" type="submit" disabled={saving}>
+                            {saving ? (
+                                <>
+                                    <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
+                                    Salvando...
+                                </>
+                            ) : (
+                                editingCategory ? 'Atualizar' : 'Criar'
+                            )}
+                        </Button>
+                    </Modal.Footer>
+                </Form>
+            </Modal>
+        </Container>
+    );
 };
 
 export default AdminCategories;
