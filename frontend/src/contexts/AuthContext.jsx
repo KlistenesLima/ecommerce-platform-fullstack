@@ -1,68 +1,85 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import { authService } from '../services';
-import { jwtDecode } from 'jwt-decode';
+import { createContext, useState, useEffect, useContext } from 'react';
+import api from '../services/api';
 
-const AuthContext = createContext(null);
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
-  return context;
-};
+const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const decoded = jwtDecode(token);
-        if (decoded.exp * 1000 > Date.now()) {
-          setUser(authService.getCurrentUser());
-        } else {
-          authService.logout();
+    useEffect(() => {
+        const recoveredUser = localStorage.getItem('@LuxeStore:user');
+        const token = localStorage.getItem('@LuxeStore:token');
+
+        if (recoveredUser && token) {
+            setUser(JSON.parse(recoveredUser));
+            api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         }
-      } catch {
-        authService.logout();
-      }
-    }
-    setLoading(false);
-  }, []);
 
-  const login = async (email, password) => {
-    const data = await authService.login(email, password);
-    setUser(data.user);
-    return data;
-  };
+        setLoading(false);
+    }, []);
 
-  const register = async (userData) => {
-    const data = await authService.register(userData);
-    return data;
-  };
+    const signIn = async ({ email, password }) => {
+        try {
+            console.log("Tentando logar com:", email);
+            const response = await api.post('/auth/login', { email, password });
 
-  const logout = () => {
-    authService.logout();
-    setUser(null);
-  };
+            console.log("RESPOSTA DO BACKEND:", response.data); // <--- O SEGREDO ESTÁ AQUI
 
-  const value = {
-    user,
-    login,
-    register,
-    logout,
-    isAuthenticated: !!user,
-    loading
-  };
+            // Tenta pegar os dados. Se o backend mandar com letra maiúscula ou minúscula, garantimos aqui:
+            const token = response.data.token || response.data.Token;
+            const role = response.data.role || response.data.Role;
+            const userId = response.data.userId || response.data.UserId || response.data.id;
+            const firstName = response.data.firstName || response.data.FirstName;
 
-  return (
-    <AuthContext.Provider value={value}>
-      {!loading && children}
-    </AuthContext.Provider>
-  );
+            if (!token) {
+                console.error("Token não veio!");
+                throw new Error("Token ausente na resposta");
+            }
+
+            const userData = {
+                id: userId,
+                name: firstName,
+                role: role,
+                email
+            };
+
+            console.log("Objeto User montado:", userData);
+
+            localStorage.setItem('@LuxeStore:user', JSON.stringify(userData));
+            localStorage.setItem('@LuxeStore:token', token);
+
+            api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+            setUser(userData);
+
+            return userData;
+        } catch (error) {
+            console.error("Erro no signIn:", error);
+            throw error; // Joga o erro pro Login.jsx tratar
+        }
+    };
+
+    const signOut = () => {
+        localStorage.removeItem('@LuxeStore:user');
+        localStorage.removeItem('@LuxeStore:token');
+        api.defaults.headers.common['Authorization'] = undefined;
+        setUser(null);
+    };
+
+    return (
+        <AuthContext.Provider value={{
+            signed: !!user,
+            user,
+            loading,
+            signIn,
+            signOut
+        }}>
+            {children}
+        </AuthContext.Provider>
+    );
 };
 
-export default AuthContext;
+export const useAuth = () => {
+    const context = useContext(AuthContext);
+    return context;
+};
