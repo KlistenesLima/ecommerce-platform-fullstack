@@ -1,68 +1,117 @@
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+    /* === PALETA DE CORES (Luxe Admin Theme) === */
+    --bg-primary: #0f111a; /* Fundo da página (quase preto) */
+    --bg-secondary: #1a1d29; /* Fundo dos cards/sidebar */
+    --bg-hover: #262a3b; /* Fundo ao passar o mouse */
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+    --text-primary: #ffffff; /* Texto principal */
+    --text-secondary: #94a3b8; /* Texto secundário (cinza azulado) */
+    --text-muted: #64748b; /* Texto desabilitado/detalhes */
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+    --accent-color: #d4af37; /* Dourado Luxe */
+    --accent-hover: #b5952f; /* Dourado mais escuro */
+
+    --danger: #ef4444; /* Vermelho Erro */
+    --success: #10b981; /* Verde Sucesso */
+    --warning: #f59e0b; /* Laranja Alerta */
+
+    --border-color: #2e3445; /* Bordas sutis */
+    /* === MEDIDAS E SOMBRAS === */
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5);
+    --sidebar-width: 260px;
+    --header-height: 70px;
+    /* Fontes */
+    font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    font-weight: 400;
+    /* Configurações padrão do navegador */
+    color-scheme: dark;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
+/* === RESET GLOBAL === */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
 }
 
 body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    min-width: 320px;
+    min-height: 100vh;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    /* Importante: Removemos o display:flex centralizado do Vite */
+    display: block;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+/* === LINKS E BOTÕES GERAIS === */
+a {
+    font-weight: 500;
+    color: var(--accent-color);
+    text-decoration: inherit;
+    transition: 0.3s;
 }
+
+    a:hover {
+        color: var(--accent-hover);
+    }
 
 button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;
+    padding: 0.6em 1.2em;
+    font-size: 1em;
+    font-weight: 500;
+    font-family: inherit;
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.25s;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+    button:hover {
+        border-color: var(--accent-color);
+        background-color: var(--bg-secondary);
+    }
+
+    button:focus,
+    button:focus-visible {
+        outline: 2px solid var(--accent-color);
+    }
+
+/* === CUSTOM SCROLLBAR (Barra de rolagem bonita) === */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: var(--text-secondary);
+    }
+
+/* Classes Utilitárias */
+.text-gold {
+    color: var(--accent-color);
+}
+
+.center {
+    text-align: center;
 }
