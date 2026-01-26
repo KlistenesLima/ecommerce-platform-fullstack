@@ -1,9 +1,10 @@
 .auth-container {
-    height: 100vh; /* Ocupa a altura toda da tela */
+    min-height: 100vh; /* Ocupa altura total */
+    width: 100%;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #0f111a; /* Fundo escuro */
+    align-items: center; /* Centraliza Verticalmente */
+    justify-content: center; /* Centraliza Horizontalmente */
+    background-color: var(--bg-primary);
     padding: 20px;
 }
 
@@ -16,6 +17,7 @@
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
     text-align: center;
     color: #fff;
+    border: 1px solid var(--border-color); /* Adicione uma borda sutil */
 }
 
     .auth-card h2 {

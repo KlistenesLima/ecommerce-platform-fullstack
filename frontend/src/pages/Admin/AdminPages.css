@@ -1,10 +1,14 @@
-/* Cabeçalho da Página Interna */
+/* ========================================= */
+/* === ESTRUTURA GERAL DAS PÁGINAS === */
+/* ========================================= */
+
+/* Cabeçalho da Página (Título e Subtítulo) */
 .page-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 2rem;
-    flex-wrap: wrap; /* Permite quebrar linha no mobile */
+    flex-wrap: wrap;
     gap: 1rem;
 }
 
@@ -20,35 +24,23 @@
         margin: 0;
     }
 
-/* Card Genérico e Container da Tabela */
-.table-container, .card {
-    background-color: var(--bg-secondary);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--border-color);
-    padding: 1.5rem;
-    box-shadow: var(--shadow-sm);
-    /* === CORREÇÃO IMPORTANTE PARA NOTEBOOK === */
-    width: 100%;
-    overflow-x: auto; /* Adiciona scroll horizontal se necessário */
-    -webkit-overflow-scrolling: touch; /* Scroll suave no iOS */
-}
-
 /* Barra de Busca */
 .search-box {
     display: flex;
     align-items: center;
-    background-color: var(--bg-primary);
+    background-color: var(--bg-secondary); /* Fundo um pouco mais claro que a página */
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
     padding: 0.8rem 1rem;
     margin-bottom: 1.5rem;
     max-width: 400px;
     color: var(--text-secondary);
-    transition: border-color 0.3s;
+    transition: border-color 0.3s, box-shadow 0.3s;
 }
 
     .search-box:focus-within {
         border-color: var(--accent-color);
+        box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.1);
     }
 
     .search-box input {
@@ -61,12 +53,161 @@
         font-size: 0.95rem;
     }
 
-/* Tabelas Premium */
+/* ========================================= */
+/* === DASHBOARD (CARDS PREMIUM) === */
+/* ========================================= */
+
+/* Grid do Dashboard */
+.stats-grid {
+    display: grid;
+    /* Cria colunas responsivas: mínimo de 260px */
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+}
+
+/* Card Principal */
+.stat-card {
+    /* Gradiente sutil para dar volume */
+    background: linear-gradient(145deg, #23273a 0%, #1a1d29 100%);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-lg);
+    padding: 1.8rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+    /* Efeito de "Passar luz" (Shine) no hover */
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.03), transparent);
+        transform: translateX(-100%);
+        transition: 0.5s;
+    }
+
+    .stat-card:hover::before {
+        transform: translateX(100%);
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+        border-color: rgba(255, 255, 255, 0.1);
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    /* === GLOW ESPECÍFICO POR TIPO === */
+    /* Usa a classe do ícone para colorir a borda do card pai */
+    .stat-card:has(.sales):hover {
+        border-color: rgba(212, 175, 55, 0.4);
+        box-shadow: 0 10px 30px rgba(212, 175, 55, 0.15);
+    }
+
+    .stat-card:has(.orders):hover {
+        border-color: rgba(59, 130, 246, 0.4);
+        box-shadow: 0 10px 30px rgba(59, 130, 246, 0.15);
+    }
+
+    .stat-card:has(.users):hover {
+        border-color: rgba(16, 185, 129, 0.4);
+        box-shadow: 0 10px 30px rgba(16, 185, 129, 0.15);
+    }
+
+    .stat-card:has(.products):hover {
+        border-color: rgba(139, 92, 246, 0.4);
+        box-shadow: 0 10px 30px rgba(139, 92, 246, 0.15);
+    }
+
+/* Ícones dos Cards */
+.stat-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    flex-shrink: 0;
+    box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.1), 0 4px 8px rgba(0,0,0,0.2);
+}
+
+    .stat-icon.sales {
+        background: rgba(212, 175, 55, 0.15);
+        color: #ecc94b;
+    }
+
+    .stat-icon.orders {
+        background: rgba(59, 130, 246, 0.15);
+        color: #60a5fa;
+    }
+
+    .stat-icon.users {
+        background: rgba(16, 185, 129, 0.15);
+        color: #34d399;
+    }
+
+    .stat-icon.products {
+        background: rgba(139, 92, 246, 0.15);
+        color: #a78bfa;
+    }
+
+/* Textos do Card */
+.stat-info {
+    display: flex;
+    flex-direction: column;
+}
+
+    .stat-info h3 {
+        font-size: 0.95rem;
+        color: var(--text-secondary);
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        margin-top: 0;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .stat-info p {
+        font-size: 1.75rem;
+        color: white;
+        font-weight: 700;
+        margin: 0;
+        line-height: 1.2;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+/* ========================================= */
+/* === TABELAS E LISTAGENS === */
+/* ========================================= */
+
+/* Container da Tabela (Fundo + Scroll Responsivo) */
+.table-container {
+    background-color: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+    /* Essencial para responsividade */
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Tabela em si */
 .data-table {
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
-    min-width: 800px; /* Garante que a tabela não esprema demais no notebook */
+    min-width: 800px; /* Garante largura mínima para não quebrar colunas */
 }
 
     .data-table th {
@@ -77,7 +218,7 @@
         text-transform: uppercase;
         letter-spacing: 0.05em;
         border-bottom: 1px solid var(--border-color);
-        white-space: nowrap; /* Títulos não quebram linha */
+        white-space: nowrap;
     }
 
     .data-table td {
@@ -86,7 +227,7 @@
         color: var(--text-primary);
         vertical-align: middle;
         font-size: 0.95rem;
-        white-space: nowrap; /* Conteúdo não quebra linha para manter alinhamento */
+        white-space: nowrap; /* Impede quebra de linha feia */
     }
 
     .data-table tr:last-child td {
@@ -98,14 +239,14 @@
         transition: background-color 0.2s;
     }
 
-/* Fonte Mono para IDs (Fica estilo código) */
+/* Fonte para IDs (Estilo código) */
 .font-mono {
     font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
     color: var(--text-secondary);
     font-size: 0.85rem;
 }
 
-/* Badges de Status */
+/* Badges de Status (Pílulas Coloridas) */
 .status-badge {
     display: inline-flex;
     align-items: center;
@@ -133,7 +274,7 @@
     color: #ef4444;
 }
 
-/* Botões de Ação */
+/* Botões de Ação (Olho, Lixeira, etc) */
 .actions {
     display: flex;
     gap: 8px;
@@ -165,12 +306,19 @@
         border-color: var(--accent-color);
     }
 
+    .btn-icon.edit:hover {
+        color: var(--warning);
+        border-color: var(--warning);
+    }
+    /* Amarelo para editar */
     .btn-icon.delete:hover {
         color: var(--danger);
         border-color: var(--danger);
     }
 
-/* Ajuste Responsivo */
+/* ========================================= */
+/* === RESPONSIVIDADE === */
+/* ========================================= */
 @media (max-width: 768px) {
     .page-header {
         flex-direction: column;
@@ -180,5 +328,9 @@
     .search-box {
         max-width: 100%;
         width: 100%;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr; /* Um card por linha no celular */
     }
 }
