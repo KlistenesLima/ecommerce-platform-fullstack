@@ -39,6 +39,7 @@ namespace ProjetoEcommerce.Application.Auth.Services
                 Email = user.Email,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
+                Role = user.Role, 
                 Token = token,
                 ExpiresAt = DateTime.UtcNow.AddHours(1)
             };
@@ -68,6 +69,7 @@ namespace ProjetoEcommerce.Application.Auth.Services
                 Email = user.Email,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
+                Role = user.Role, 
                 Token = token,
                 ExpiresAt = DateTime.UtcNow.AddHours(1)
             };

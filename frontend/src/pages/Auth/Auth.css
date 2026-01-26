@@ -1,225 +1,108 @@
-.auth-page {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--spacing-lg);
-}
-
 .auth-container {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  width: 100%;
-  max-width: 1000px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  overflow: hidden;
-  box-shadow: var(--shadow-lg);
+    height: 100vh; /* Ocupa a altura toda da tela */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #0f111a; /* Fundo escuro */
+    padding: 20px;
 }
 
 .auth-card {
-  padding: var(--spacing-3xl);
+    width: 100%;
+    max-width: 400px; /* Impede que fique gigante */
+    background: #1a1d29;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    text-align: center;
+    color: #fff;
 }
 
-/* Header */
-.auth-header {
-  text-align: center;
-  margin-bottom: var(--spacing-2xl);
-}
+    .auth-card h2 {
+        margin-bottom: 0.5rem;
+        color: #d4af37; /* Dourado do Luxe */
+    }
 
-.auth-logo {
-  display: inline-flex;
-  font-family: var(--font-display);
-  font-size: 1.5rem;
-  font-weight: 700;
-  text-decoration: none;
-  margin-bottom: var(--spacing-xl);
-}
+    .auth-card p {
+        color: #8f9bb3;
+        margin-bottom: 2rem;
+    }
 
-.auth-header h1 {
-  font-size: 1.75rem;
-  margin-bottom: var(--spacing-sm);
-}
-
-.auth-header p {
-  color: var(--text-muted);
-}
-
-/* Form */
-.auth-form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-lg);
-}
+    .auth-card form {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
 
 .form-group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
+    position: relative;
+    width: 100%;
 }
 
-.input-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
+.icon-input {
+    display: flex;
+    align-items: center;
 }
 
-.input-icon {
-  position: absolute;
-  left: var(--spacing-lg);
-  color: var(--text-muted);
-  pointer-events: none;
-}
+    .icon-input svg {
+        position: absolute;
+        left: 12px;
+        color: #8f9bb3;
+        font-size: 1.2rem;
+        z-index: 10;
+    }
 
-.input-wrapper .form-control {
-  padding-left: calc(var(--spacing-lg) * 2 + 16px);
-}
+    .icon-input input {
+        width: 100%;
+        padding: 12px 12px 12px 40px; /* Espaço para o ícone */
+        border-radius: 4px;
+        border: 1px solid #2e3445;
+        background-color: #141721;
+        color: white;
+        outline: none;
+        font-size: 0.95rem;
+        transition: border-color 0.3s;
+        box-sizing: border-box; /* Garante que o padding não estoure a largura */
+    }
 
-.form-control.error {
-  border-color: var(--danger);
-}
-
-.toggle-password {
-  position: absolute;
-  right: var(--spacing-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--spacing-sm);
-  color: var(--text-muted);
-  background: none;
-  border: none;
-  cursor: pointer;
-  transition: var(--transition-fast);
-}
-
-.toggle-password:hover {
-  color: var(--primary);
-}
-
-.error-message {
-  font-size: 0.8rem;
-  color: var(--danger);
-}
-
-/* Form Options */
-.form-options {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-
-.checkbox-label input {
-  display: none;
-}
-
-.checkmark {
-  width: 18px;
-  height: 18px;
-  border: 2px solid var(--border);
-  border-radius: var(--radius-sm);
-  transition: var(--transition-fast);
-}
-
-.checkbox-label input:checked + .checkmark {
-  background: var(--primary);
-  border-color: var(--primary);
-}
-
-.checkbox-label input:checked + .checkmark::after {
-  content: '✓';
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--secondary);
-  font-size: 0.7rem;
-  font-weight: bold;
-}
-
-.forgot-link {
-  font-size: 0.9rem;
-  color: var(--primary);
-}
+        .icon-input input:focus {
+            border-color: #d4af37;
+        }
 
 .btn-block {
-  width: 100%;
-  margin-top: var(--spacing-md);
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px;
+    background-color: #d4af37;
+    color: #0f111a;
+    font-weight: bold;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: filter 0.2s;
 }
 
-/* Footer */
+    .btn-block:hover:not(:disabled) {
+        filter: brightness(1.1);
+    }
+
+    .btn-block:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+
 .auth-footer {
-  margin-top: var(--spacing-xl);
-  text-align: center;
+    margin-top: 1.5rem;
+    font-size: 0.9rem;
+    color: #8f9bb3;
 }
 
-.auth-footer p {
-  font-size: 0.9rem;
-  color: var(--text-muted);
-}
+    .auth-footer a {
+        color: #d4af37;
+        text-decoration: none;
+        margin-left: 5px;
+    }
 
-.auth-footer a {
-  color: var(--primary);
-  font-weight: 500;
-}
-
-/* Banner */
-.auth-banner {
-  position: relative;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding: var(--spacing-3xl);
-  background: 
-    linear-gradient(to top, rgba(15, 15, 26, 0.9), transparent),
-    url('https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800') center/cover;
-}
-
-.banner-content {
-  text-align: center;
-  color: white;
-}
-
-.banner-content h2 {
-  font-size: 1.75rem;
-  margin-bottom: var(--spacing-sm);
-}
-
-.banner-content p {
-  color: rgba(255, 255, 255, 0.8);
-}
-
-/* Input Row (Register) */
-.input-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-lg);
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .auth-container {
-    grid-template-columns: 1fr;
-  }
-
-  .auth-banner {
-    display: none;
-  }
-
-  .auth-card {
-    padding: var(--spacing-2xl);
-  }
-
-  .input-row {
-    grid-template-columns: 1fr;
-  }
-}
+        .auth-footer a:hover {
+            text-decoration: underline;
+        }
