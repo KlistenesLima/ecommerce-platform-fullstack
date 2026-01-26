@@ -16,6 +16,13 @@ namespace ProjetoEcommerce.Api.Controllers
         private readonly IOrderService _orderService;
         public OrdersController(IOrderService orderService) => _orderService = orderService;
 
+        [HttpGet]
+        public async Task<IActionResult> GetAllOrders()
+        {
+            var orders = await _orderService.GetAllAsync();
+            return Ok(orders);
+        }
+
         [HttpPost]
         public async Task<IActionResult> CreateOrder([FromBody] CreateOrderRequest request)
         {

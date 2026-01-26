@@ -14,6 +14,13 @@ namespace ProjetoEcommerce.Api.Controllers
         private readonly IUserService _userService;
         public UsersController(IUserService userService) => _userService = userService;
 
+        [HttpGet]
+        public async Task<IActionResult> GetAllUsers()
+        {
+            var users = await _userService.GetAllAsync();
+            return Ok(users);
+        }
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetUser(Guid id)
         {
@@ -33,6 +40,27 @@ namespace ProjetoEcommerce.Api.Controllers
             {
                 return Conflict(new { message = ex.Message });
             }
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateUser(Guid id, [FromBody] UpdateUserRequest request)
+        {
+            try
+            {
+                var user = await _userService.UpdateUserAsync(id, request);
+                return Ok(user);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteUser(Guid id)
+        {
+            await _userService.DeleteUserAsync(id);
+            return NoContent();
         }
     }
 }

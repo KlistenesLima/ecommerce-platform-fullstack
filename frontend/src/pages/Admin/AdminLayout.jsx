@@ -1,89 +1,75 @@
-import { useState } from 'react';
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { 
-  FiHome, FiPackage, FiGrid, FiShoppingCart, FiUsers, 
-  FiSettings, FiLogOut, FiMenu, FiX, FiChevronDown 
-} from 'react-icons/fi';
+import { Outlet, Navigate, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { FiGrid, FiBox, FiList, FiUsers, FiLogOut, FiFolder } from 'react-icons/fi'; // Adicionei FiFolder
 import './AdminLayout.css';
 
 const AdminLayout = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
+    const { user, loading, signOut } = useAuth();
+    const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+    // === ADICIONE ISSO PARA VER NO CONSOLE (F12) ===
+    console.log("AdminLayout - Loading:", loading);
+    console.log("AdminLayout - User:", user);
+    // ==============================================
 
-  const menuItems = [
-    { path: '/admin', icon: <FiHome />, label: 'Dashboard', exact: true },
-    { path: '/admin/products', icon: <FiPackage />, label: 'Produtos' },
-    { path: '/admin/categories', icon: <FiGrid />, label: 'Categorias' },
-    { path: '/admin/orders', icon: <FiShoppingCart />, label: 'Pedidos' },
-    { path: '/admin/users', icon: <FiUsers />, label: 'Usuários' },
-  ];
+    // 1. Enquanto carrega, mostra tela branca ou spinner (não redireciona ainda)
+    if (loading) {
+        return <div className="loading-screen">Carregando...</div>;
+    }
 
-  return (
-    <div className={`admin-layout ${sidebarOpen ? '' : 'sidebar-collapsed'}`}>
-      {/* Sidebar */}
-      <aside className="admin-sidebar">
-        <div className="sidebar-header">
-          <Link to="/admin" className="admin-logo">
-            <span className="logo-text">LUXE</span>
-            <span className="logo-accent">Admin</span>
-          </Link>
-          <button className="sidebar-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
-            {sidebarOpen ? <FiX /> : <FiMenu />}
-          </button>
+    // 2. Se não tem usuário logado, vai para login
+    if (!user) {
+        return <Navigate to="/login" />;
+    }
+
+    // 3. Se tem usuário mas NÃO é admin, chuta para a Home
+    if (user.role !== 'admin') {
+        return <Navigate to="/" />;
+    }
+
+    const handleLogout = () => {
+        signOut();
+        navigate('/login');
+    };
+
+    return (
+        <div className="admin-layout">
+            <aside className="sidebar">
+                <div className="sidebar-header">
+                    <h3>Admin Panel</h3>
+                </div>
+                <nav className="sidebar-nav">
+                    <Link to="/admin" className="nav-item">
+                        <FiGrid /> Dashboard
+                    </Link>
+                    <Link to="/admin/products" className="nav-item">
+                        <FiBox /> Produtos
+                    </Link>
+                    <Link to="/admin/categories" className="nav-item"> {/* Link Novo */}
+                        <FiFolder /> Categorias
+                    </Link>
+                    <Link to="/admin/orders" className="nav-item">
+                        <FiList /> Pedidos
+                    </Link>
+                    <Link to="/admin/users" className="nav-item">
+                        <FiUsers /> Usuários
+                    </Link>
+                </nav>
+                <div className="sidebar-footer">
+                    <div className="user-info">
+                        <span>{user.name}</span>
+                        <small>Administrador</small>
+                    </div>
+                    <button onClick={handleLogout} className="logout-btn">
+                        <FiLogOut />
+                    </button>
+                </div>
+            </aside>
+            <main className="admin-content">
+                <Outlet />
+            </main>
         </div>
-
-        <nav className="sidebar-nav">
-          {menuItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              end={item.exact}
-              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-            >
-              <span className="nav-icon">{item.icon}</span>
-              <span className="nav-label">{item.label}</span>
-            </NavLink>
-          ))}
-        </nav>
-
-        <div className="sidebar-footer">
-          <Link to="/" className="nav-item">
-            <span className="nav-icon"><FiSettings /></span>
-            <span className="nav-label">Ver Loja</span>
-          </Link>
-          <button className="nav-item logout" onClick={handleLogout}>
-            <span className="nav-icon"><FiLogOut /></span>
-            <span className="nav-label">Sair</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <div className="admin-main">
-        <header className="admin-header">
-          <button className="mobile-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
-            <FiMenu />
-          </button>
-          <div className="header-spacer"></div>
-          <div className="header-user">
-            <span className="user-name">{user?.firstName || 'Admin'}</span>
-            <FiChevronDown />
-          </div>
-        </header>
-
-        <main className="admin-content">
-          <Outlet />
-        </main>
-      </div>
-    </div>
-  );
+    );
 };
 
 export default AdminLayout;
