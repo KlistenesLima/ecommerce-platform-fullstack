@@ -1,5 +1,6 @@
 using Amazon.S3;
 using Amazon.S3.Model;
+using Amazon.S3.Transfer;
 using ProjetoEcommerce.Application.Configuration;
 using ProjetoEcommerce.Application.Storage;
 using System;
@@ -12,6 +13,9 @@ namespace ProjetoEcommerce.Infra.Storage
     {
         private readonly IAmazonS3 _s3Client;
         private readonly AWSSettings _awsSettings;
+
+        // URL específica para DOWNLOAD público do Backblaze (Região 005)
+        private const string BackblazePublicUrl = "https://f005.backblazeb2.com/file";
 
         public S3StorageService(IAmazonS3 s3Client, AWSSettings awsSettings)
         {
@@ -26,43 +30,33 @@ namespace ProjetoEcommerce.Infra.Storage
                 var extension = Path.GetExtension(originalFileName);
                 var fileName = $"{Guid.NewGuid()}{extension}";
 
-                Console.WriteLine($"=== DEBUG S3 UPLOAD ===");
-                Console.WriteLine($"FileName: {fileName}");
-                Console.WriteLine($"BucketName: {_awsSettings.S3BucketName}");
-
+                // Copia para memória para evitar erros de stream
                 using var memoryStream = new MemoryStream();
                 await fileStream.CopyToAsync(memoryStream);
                 memoryStream.Position = 0;
 
-                var putRequest = new PutObjectRequest
+                var uploadRequest = new TransferUtilityUploadRequest
                 {
-                    BucketName = _awsSettings.S3BucketName,
-                    Key = fileName,
                     InputStream = memoryStream,
+                    Key = fileName,
+                    BucketName = _awsSettings.S3BucketName,
+                    CannedACL = S3CannedACL.PublicRead,
                     ContentType = contentType,
-                    CannedACL = S3CannedACL.PublicRead
+                    AutoCloseStream = false
                 };
 
-                Console.WriteLine($"Iniciando upload com PutObjectAsync...");
-                var response = await _s3Client.PutObjectAsync(putRequest);
-                Console.WriteLine($"Upload concluído! Status: {response.HttpStatusCode}");
+                // Faz o upload usando o cliente S3 (que aponta para s3.us-west-005...)
+                var fileTransferUtility = new TransferUtility(_s3Client);
+                await fileTransferUtility.UploadAsync(uploadRequest);
 
-                return $"https://{_awsSettings.S3BucketName}.s3.us-west-005.backblazeb2.com/{fileName}";
-            }
-            catch (AmazonS3Exception s3Ex)
-            {
-                Console.WriteLine($"=== ERRO S3 ===");
-                Console.WriteLine($"ErrorCode: {s3Ex.ErrorCode}");
-                Console.WriteLine($"StatusCode: {s3Ex.StatusCode}");
-                Console.WriteLine($"Message: {s3Ex.Message}");
-                throw new Exception($"Erro S3: {s3Ex.Message} - ErrorCode: {s3Ex.ErrorCode}", s3Ex);
+                // === AQUI ESTÁ A CORREÇÃO DA URL ===
+                // Retorna a URL "Friendly" do Backblaze que funciona no navegador
+                // Formato: https://f005.backblazeb2.com/file/{Bucket}/{Arquivo}
+                return $"{BackblazePublicUrl}/{_awsSettings.S3BucketName}/{fileName}";
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"=== ERRO GERAL ===");
-                Console.WriteLine($"Message: {ex.Message}");
-                Console.WriteLine($"InnerException: {ex.InnerException?.Message}");
-                throw new Exception($"Erro ao fazer upload: {ex.Message}", ex);
+                throw;
             }
         }
 
@@ -70,8 +64,10 @@ namespace ProjetoEcommerce.Infra.Storage
         {
             try
             {
+                // Extrai o nome do arquivo da URL (funciona tanto para s3... quanto f005...)
                 var uri = new Uri(fileUrl);
                 var fileName = Path.GetFileName(uri.LocalPath);
+
                 await _s3Client.DeleteObjectAsync(_awsSettings.S3BucketName, fileName);
                 return true;
             }
@@ -83,7 +79,8 @@ namespace ProjetoEcommerce.Infra.Storage
 
         public string GetFileUrl(string key)
         {
-            return $"https://{_awsSettings.S3BucketName}.s3.us-west-005.backblazeb2.com/{key}";
+            // Garante que se precisar recuperar a URL pelo nome, use o formato correto
+            return $"{BackblazePublicUrl}/{_awsSettings.S3BucketName}/{key}";
         }
     }
 }
