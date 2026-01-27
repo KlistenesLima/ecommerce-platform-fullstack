@@ -101,19 +101,26 @@ public static class DependencyInjection
         // Configure AWS S3
         if (!string.IsNullOrEmpty(awsSettings.AccessKey) && !string.IsNullOrEmpty(awsSettings.SecretKey))
         {
+            // === AQUI ESTÁ A CORREÇÃO ===
             var s3Config = new AmazonS3Config
             {
-                RegionEndpoint = RegionEndpoint.GetBySystemName(awsSettings.Region)
+                // Usamos ServiceURL porque Backblaze não é uma região padrão da AWS
+                ServiceURL = awsSettings.ServiceUrl
             };
+            // ============================
 
             services.AddSingleton<IAmazonS3>(sp =>
                 new AmazonS3Client(awsSettings.AccessKey, awsSettings.SecretKey, s3Config));
         }
         else
         {
-            // Usar credenciais do ambiente (IAM Role, etc)
+            // Fallback (se não tiver chaves, tenta usar config padrão)
+            var s3Config = new AmazonS3Config
+            {
+                ServiceURL = awsSettings.ServiceUrl
+            };
             services.AddSingleton<IAmazonS3>(sp =>
-                new AmazonS3Client(RegionEndpoint.GetBySystemName(awsSettings.Region)));
+                new AmazonS3Client(s3Config));
         }
 
         services.AddScoped<IS3StorageService, S3StorageService>();
@@ -151,7 +158,7 @@ public class AWSSettings
 {
     public string AccessKey { get; set; } = string.Empty;
     public string SecretKey { get; set; } = string.Empty;
-    public string Region { get; set; } = "us-east-1";
+    public string ServiceUrl { get; set; } = string.Empty;
     public string S3BucketName { get; set; } = string.Empty;
 }
 
