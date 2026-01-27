@@ -1,4 +1,5 @@
 using Amazon;
+using Amazon.Runtime;
 using Amazon.S3;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -93,31 +94,40 @@ public static class DependencyInjection
 
     public static IServiceCollection AddCloudServices(this IServiceCollection services, IConfiguration configuration)
     {
-        // 1. Lê as configurações do JSON para a classe
         var awsSettings = new AWSSettings();
         configuration.GetSection("AWS").Bind(awsSettings);
-        services.AddSingleton(awsSettings); // Registra para ser usada no S3StorageService
+        services.AddSingleton(awsSettings);
 
-        // 2. Configura o Cliente S3 para conectar no Backblaze
         if (!string.IsNullOrEmpty(awsSettings.AccessKey))
         {
             var s3Config = new AmazonS3Config
             {
-                ServiceURL = awsSettings.ServiceUrl, // <--- O PULO DO GATO (us-west-005)
-                ForcePathStyle = true // Necessário para Backblaze
+                // VOLTAMOS PARA HTTPS (Porta 443)
+                ServiceURL = "https://s3.us-west-005.backblazeb2.com",
+
+                ForcePathStyle = true,
+
+                // Removemos o UseHttp=true (pois backblaze exige HTTPS)
+
+                // === A MÁGICA ACONTECE AQUI ===
+                // Usamos nossa fábrica que ignora erros de SSL
+                HttpClientFactory = new InsecureHttpClientFactory()
             };
 
+            var credentials = new BasicAWSCredentials(
+                awsSettings.AccessKey,
+                awsSettings.SecretKey
+            );
+
             services.AddSingleton<IAmazonS3>(sp =>
-                new AmazonS3Client(awsSettings.AccessKey, awsSettings.SecretKey, s3Config));
+                new AmazonS3Client(credentials, s3Config));
         }
         else
         {
-            // Fallback apenas para não quebrar se esquecer a chave
             services.AddSingleton<IAmazonS3>(sp =>
-                new AmazonS3Client(new AmazonS3Config { RegionEndpoint = Amazon.RegionEndpoint.USEast1 }));
+                new AmazonS3Client(new AmazonS3Config { RegionEndpoint = RegionEndpoint.USEast1 }));
         }
 
-        // 3. Registra o serviço de storage
         services.AddScoped<IS3StorageService, S3StorageService>();
 
         return services;
@@ -164,4 +174,20 @@ public class RabbitMQSettings
     public string VirtualHost { get; set; } = "/";
 }
 
+// Cole isso no FINAL do arquivo DependencyInjection.cs, fora das chaves da classe DependencyInjection
+
+public class InsecureHttpClientFactory : Amazon.Runtime.HttpClientFactory
+{
+    public override System.Net.Http.HttpClient CreateHttpClient(Amazon.Runtime.IClientConfig clientConfig)
+    {
+        var handler = new System.Net.Http.HttpClientHandler();
+
+        // O COMANDO MÁGICO: Ignora todos os erros de certificado SSL
+        handler.ServerCertificateCustomValidationCallback =
+            (httpRequestMessage, cert, cetChain, policyErrors) => true;
+
+        var client = new System.Net.Http.HttpClient(handler);
+        return client;
+    }
+}
 #endregion

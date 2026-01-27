@@ -1,5 +1,5 @@
 using Amazon.S3;
-using Amazon.S3.Transfer;
+using Amazon.S3.Model;
 using ProjetoEcommerce.Application.Configuration;
 using ProjetoEcommerce.Application.Storage;
 using System;
@@ -11,7 +11,7 @@ namespace ProjetoEcommerce.Infra.Storage
     public class S3StorageService : IS3StorageService
     {
         private readonly IAmazonS3 _s3Client;
-        private readonly AWSSettings _awsSettings; // Injetamos as configs aqui
+        private readonly AWSSettings _awsSettings;
 
         public S3StorageService(IAmazonS3 s3Client, AWSSettings awsSettings)
         {
@@ -23,38 +23,46 @@ namespace ProjetoEcommerce.Infra.Storage
         {
             try
             {
-                // 1. Gera nome único para o arquivo
                 var extension = Path.GetExtension(originalFileName);
                 var fileName = $"{Guid.NewGuid()}{extension}";
 
-                // 2. Prepara o upload
-                var uploadRequest = new TransferUtilityUploadRequest
+                Console.WriteLine($"=== DEBUG S3 UPLOAD ===");
+                Console.WriteLine($"FileName: {fileName}");
+                Console.WriteLine($"BucketName: {_awsSettings.S3BucketName}");
+
+                using var memoryStream = new MemoryStream();
+                await fileStream.CopyToAsync(memoryStream);
+                memoryStream.Position = 0;
+
+                var putRequest = new PutObjectRequest
                 {
-                    InputStream = fileStream,
-                    Key = fileName,
                     BucketName = _awsSettings.S3BucketName,
-                    CannedACL = S3CannedACL.PublicRead, // Permite ver a imagem no site
-                    ContentType = contentType
+                    Key = fileName,
+                    InputStream = memoryStream,
+                    ContentType = contentType,
+                    CannedACL = S3CannedACL.PublicRead
                 };
 
-                // 3. Faz o upload
-                var fileTransferUtility = new TransferUtility(_s3Client);
-                await fileTransferUtility.UploadAsync(uploadRequest);
+                Console.WriteLine($"Iniciando upload com PutObjectAsync...");
+                var response = await _s3Client.PutObjectAsync(putRequest);
+                Console.WriteLine($"Upload concluído! Status: {response.HttpStatusCode}");
 
-                // 4. Monta a URL correta do Backblaze
-                // Pega do appsettings: https://s3.us-west-005.backblazeb2.com
-                var serviceUrl = _awsSettings.ServiceUrl;
-
-                if (serviceUrl.EndsWith("/"))
-                    serviceUrl = serviceUrl.TrimEnd('/');
-
-                // Retorna: https://s3.us-west-005.backblazeb2.com/luxestore-media/arquivo.jpg
-                return $"{serviceUrl}/{_awsSettings.S3BucketName}/{fileName}";
+                return $"https://{_awsSettings.S3BucketName}.s3.us-west-005.backblazeb2.com/{fileName}";
+            }
+            catch (AmazonS3Exception s3Ex)
+            {
+                Console.WriteLine($"=== ERRO S3 ===");
+                Console.WriteLine($"ErrorCode: {s3Ex.ErrorCode}");
+                Console.WriteLine($"StatusCode: {s3Ex.StatusCode}");
+                Console.WriteLine($"Message: {s3Ex.Message}");
+                throw new Exception($"Erro S3: {s3Ex.Message} - ErrorCode: {s3Ex.ErrorCode}", s3Ex);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[ERRO S3]: {ex.Message}");
-                throw;
+                Console.WriteLine($"=== ERRO GERAL ===");
+                Console.WriteLine($"Message: {ex.Message}");
+                Console.WriteLine($"InnerException: {ex.InnerException?.Message}");
+                throw new Exception($"Erro ao fazer upload: {ex.Message}", ex);
             }
         }
 
@@ -62,10 +70,8 @@ namespace ProjetoEcommerce.Infra.Storage
         {
             try
             {
-                // Tenta extrair apenas o nome do arquivo da URL completa
                 var uri = new Uri(fileUrl);
                 var fileName = Path.GetFileName(uri.LocalPath);
-
                 await _s3Client.DeleteObjectAsync(_awsSettings.S3BucketName, fileName);
                 return true;
             }
@@ -77,9 +83,7 @@ namespace ProjetoEcommerce.Infra.Storage
 
         public string GetFileUrl(string key)
         {
-            // Método auxiliar caso precise apenas montar a URL
-            var serviceUrl = _awsSettings.ServiceUrl.TrimEnd('/');
-            return $"{serviceUrl}/{_awsSettings.S3BucketName}/{key}";
+            return $"https://{_awsSettings.S3BucketName}.s3.us-west-005.backblazeb2.com/{key}";
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿namespace ProjetoEcommerce.Application.Configuration // <--- Namespace novo
+﻿namespace ProjetoEcommerce.Application.Configuration
 {
     public class AWSSettings
     {
