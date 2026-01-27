@@ -1,12 +1,15 @@
 using Amazon;
+using Amazon.Runtime;
 using Amazon.S3;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using ProjetoEcommerce.Application.Configuration;
 using ProjetoEcommerce.Application.Storage;
 using ProjetoEcommerce.Domain.Interfaces;
 using ProjetoEcommerce.Infra.Data.Context;
 using ProjetoEcommerce.Infra.Data.Repositories;
+using ProjetoEcommerce.Infra.Storage;
 using System;
 
 namespace ProjetoEcommerce.Infra.IoC;
@@ -89,31 +92,40 @@ public static class DependencyInjection
         return services;
     }
 
-    private static IServiceCollection AddCloudServices(
-        this IServiceCollection services,
-        IConfiguration configuration)
+    public static IServiceCollection AddCloudServices(this IServiceCollection services, IConfiguration configuration)
     {
-        // Bind AWS settings
         var awsSettings = new AWSSettings();
         configuration.GetSection("AWS").Bind(awsSettings);
         services.AddSingleton(awsSettings);
 
-        // Configure AWS S3
-        if (!string.IsNullOrEmpty(awsSettings.AccessKey) && !string.IsNullOrEmpty(awsSettings.SecretKey))
+        if (!string.IsNullOrEmpty(awsSettings.AccessKey))
         {
             var s3Config = new AmazonS3Config
             {
-                RegionEndpoint = RegionEndpoint.GetBySystemName(awsSettings.Region)
+                // VOLTAMOS PARA HTTPS (Porta 443)
+                ServiceURL = "https://s3.us-west-005.backblazeb2.com",
+
+                ForcePathStyle = true,
+
+                // Removemos o UseHttp=true (pois backblaze exige HTTPS)
+
+                // === A MÁGICA ACONTECE AQUI ===
+                // Usamos nossa fábrica que ignora erros de SSL
+                HttpClientFactory = new InsecureHttpClientFactory()
             };
 
+            var credentials = new BasicAWSCredentials(
+                awsSettings.AccessKey,
+                awsSettings.SecretKey
+            );
+
             services.AddSingleton<IAmazonS3>(sp =>
-                new AmazonS3Client(awsSettings.AccessKey, awsSettings.SecretKey, s3Config));
+                new AmazonS3Client(credentials, s3Config));
         }
         else
         {
-            // Usar credenciais do ambiente (IAM Role, etc)
             services.AddSingleton<IAmazonS3>(sp =>
-                new AmazonS3Client(RegionEndpoint.GetBySystemName(awsSettings.Region)));
+                new AmazonS3Client(new AmazonS3Config { RegionEndpoint = RegionEndpoint.USEast1 }));
         }
 
         services.AddScoped<IS3StorageService, S3StorageService>();
@@ -147,14 +159,6 @@ public class RedisSettings
     public int DefaultExpirationMinutes { get; set; } = 60;
 }
 
-public class AWSSettings
-{
-    public string AccessKey { get; set; } = string.Empty;
-    public string SecretKey { get; set; } = string.Empty;
-    public string Region { get; set; } = "us-east-1";
-    public string S3BucketName { get; set; } = string.Empty;
-}
-
 public class KafkaSettings
 {
     public string BootstrapServers { get; set; } = "localhost:9092";
@@ -170,4 +174,20 @@ public class RabbitMQSettings
     public string VirtualHost { get; set; } = "/";
 }
 
+// Cole isso no FINAL do arquivo DependencyInjection.cs, fora das chaves da classe DependencyInjection
+
+public class InsecureHttpClientFactory : Amazon.Runtime.HttpClientFactory
+{
+    public override System.Net.Http.HttpClient CreateHttpClient(Amazon.Runtime.IClientConfig clientConfig)
+    {
+        var handler = new System.Net.Http.HttpClientHandler();
+
+        // O COMANDO MÁGICO: Ignora todos os erros de certificado SSL
+        handler.ServerCertificateCustomValidationCallback =
+            (httpRequestMessage, cert, cetChain, policyErrors) => true;
+
+        var client = new System.Net.Http.HttpClient(handler);
+        return client;
+    }
+}
 #endregion

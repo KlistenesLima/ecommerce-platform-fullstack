@@ -24,6 +24,7 @@ namespace ProjetoEcommerce.Application.Auth.Services
 
         public string GenerateToken(User user)
         {
+            // Lê "SecretKey" do appsettings.json
             var secretKey = _configuration["Jwt:SecretKey"];
             var issuer = _configuration["Jwt:Issuer"];
             var audience = _configuration["Jwt:Audience"];
@@ -37,6 +38,8 @@ namespace ProjetoEcommerce.Application.Auth.Services
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Email, user.Email),
                 new Claim(ClaimTypes.Name, $"{user.FirstName} {user.LastName}"),
+                // === IMPORTANTE: ADICIONANDO A ROLE ===
+                new Claim(ClaimTypes.Role, user.Role),
                 new Claim("IsActive", user.IsActive.ToString())
             };
 
