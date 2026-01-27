@@ -3,10 +3,12 @@ using Amazon.S3;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using ProjetoEcommerce.Application.Configuration;
 using ProjetoEcommerce.Application.Storage;
 using ProjetoEcommerce.Domain.Interfaces;
 using ProjetoEcommerce.Infra.Data.Context;
 using ProjetoEcommerce.Infra.Data.Repositories;
+using ProjetoEcommerce.Infra.Storage;
 using System;
 
 namespace ProjetoEcommerce.Infra.IoC;
@@ -89,40 +91,33 @@ public static class DependencyInjection
         return services;
     }
 
-    private static IServiceCollection AddCloudServices(
-        this IServiceCollection services,
-        IConfiguration configuration)
+    public static IServiceCollection AddCloudServices(this IServiceCollection services, IConfiguration configuration)
     {
-        // Bind AWS settings
+        // 1. Lê as configurações do JSON para a classe
         var awsSettings = new AWSSettings();
         configuration.GetSection("AWS").Bind(awsSettings);
-        services.AddSingleton(awsSettings);
+        services.AddSingleton(awsSettings); // Registra para ser usada no S3StorageService
 
-        // Configure AWS S3
-        if (!string.IsNullOrEmpty(awsSettings.AccessKey) && !string.IsNullOrEmpty(awsSettings.SecretKey))
+        // 2. Configura o Cliente S3 para conectar no Backblaze
+        if (!string.IsNullOrEmpty(awsSettings.AccessKey))
         {
-            // === AQUI ESTÁ A CORREÇÃO ===
             var s3Config = new AmazonS3Config
             {
-                // Usamos ServiceURL porque Backblaze não é uma região padrão da AWS
-                ServiceURL = awsSettings.ServiceUrl
+                ServiceURL = awsSettings.ServiceUrl, // <--- O PULO DO GATO (us-west-005)
+                ForcePathStyle = true // Necessário para Backblaze
             };
-            // ============================
 
             services.AddSingleton<IAmazonS3>(sp =>
                 new AmazonS3Client(awsSettings.AccessKey, awsSettings.SecretKey, s3Config));
         }
         else
         {
-            // Fallback (se não tiver chaves, tenta usar config padrão)
-            var s3Config = new AmazonS3Config
-            {
-                ServiceURL = awsSettings.ServiceUrl
-            };
+            // Fallback apenas para não quebrar se esquecer a chave
             services.AddSingleton<IAmazonS3>(sp =>
-                new AmazonS3Client(s3Config));
+                new AmazonS3Client(new AmazonS3Config { RegionEndpoint = Amazon.RegionEndpoint.USEast1 }));
         }
 
+        // 3. Registra o serviço de storage
         services.AddScoped<IS3StorageService, S3StorageService>();
 
         return services;
@@ -152,14 +147,6 @@ public class RedisSettings
 {
     public string ConnectionString { get; set; } = string.Empty;
     public int DefaultExpirationMinutes { get; set; } = 60;
-}
-
-public class AWSSettings
-{
-    public string AccessKey { get; set; } = string.Empty;
-    public string SecretKey { get; set; } = string.Empty;
-    public string ServiceUrl { get; set; } = string.Empty;
-    public string S3BucketName { get; set; } = string.Empty;
 }
 
 public class KafkaSettings
