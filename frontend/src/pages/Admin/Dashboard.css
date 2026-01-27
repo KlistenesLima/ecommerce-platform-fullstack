@@ -20,33 +20,56 @@
 }
 
 .stat-card {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-lg);
-  padding: var(--spacing-xl);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+    background-color: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    transition: all 0.3s ease; /* Animação suave */
+    position: relative;
+    overflow: hidden;
 }
 
-.stat-card:hover {
-  border-color: var(--primary);
-}
+    .stat-card:hover {
+        transform: translateY(-5px); /* Sobe um pouquinho */
+        border-color: var(--accent-color); /* Borda brilha em dourado */
+        box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+    }
 
+/* Melhorar os ícones redondos */
 .stat-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 60px;
-  height: 60px;
-  font-size: 1.5rem;
-  border-radius: var(--radius-lg);
+    width: 50px;
+    height: 50px;
+    border-radius: 12px; /* Quadrado arredondado moderno */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    flex-shrink: 0;
 }
 
-.stat-icon.products { color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
-.stat-icon.orders { color: #10b981; background: rgba(16, 185, 129, 0.1); }
-.stat-icon.users { color: #8b5cf6; background: rgba(139, 92, 246, 0.1); }
-.stat-icon.revenue { color: var(--primary); background: rgba(201, 169, 98, 0.1); }
+    /* Cores específicas para os ícones */
+    .stat-icon.sales {
+        background: rgba(212, 175, 55, 0.15);
+        color: var(--accent-color);
+    }
+
+    .stat-icon.orders {
+        background: rgba(59, 130, 246, 0.15);
+        color: #3b82f6;
+    }
+
+    .stat-icon.users {
+        background: rgba(16, 185, 129, 0.15);
+        color: #10b981;
+    }
+
+    .stat-icon.products {
+        background: rgba(139, 92, 246, 0.15);
+        color: #8b5cf6;
+    }
 
 .stat-info { display: flex; flex-direction: column; }
 .stat-value { font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; }

@@ -1,160 +1,169 @@
 import { useState, useEffect } from 'react';
-import { FiEye, FiCheck, FiX, FiTruck } from 'react-icons/fi';
-import api from '../../services/api';
+import { FiEye, FiSearch, FiTruck, FiCheckCircle, FiClock, FiXCircle } from 'react-icons/fi';
+import orderService from '../../services/orderService';
 import { toast } from 'react-toastify';
 import './AdminPages.css';
 
 const AdminOrders = () => {
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all');
+    const [orders, setOrders] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState('');
 
-  useEffect(() => {
-    loadOrders();
-  }, []);
+    useEffect(() => {
+        loadOrders();
+    }, []);
 
-  const loadOrders = async () => {
-    try {
-      setLoading(true);
-      const response = await api.get('/orders');
-      setOrders(response.data || []);
-    } catch (error) {
-      console.error('Erro ao carregar pedidos:', error);
-      toast.error('Erro ao carregar pedidos');
-      setOrders([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const loadOrders = async () => {
+        try {
+            setLoading(true);
+            const data = await orderService.getAll();
 
-  const updateStatus = async (id, newStatus) => {
-    try {
-      await api.patch(`/orders/${id}/status`, { status: newStatus });
-      setOrders(orders.map(o => o.id === id ? { ...o, status: newStatus } : o));
-      toast.success(`Pedido atualizado para ${newStatus}`);
-    } catch (error) {
-      console.error('Erro ao atualizar:', error);
-      toast.error('Erro ao atualizar pedido');
-    }
-  };
-
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price);
-  };
-
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('pt-BR');
-  };
-
-  const getStatusLabel = (status) => {
-    const map = {
-      'Pending': 'Pendente',
-      'Processing': 'Processando',
-      'Shipped': 'Enviado',
-      'Delivered': 'Entregue',
-      'Cancelled': 'Cancelado',
-      'Pendente': 'Pendente',
-      'Processando': 'Processando',
-      'Enviado': 'Enviado',
-      'Entregue': 'Entregue',
-      'Cancelado': 'Cancelado'
+            // Garante que é um array, mesmo se a API retornar algo diferente
+            if (Array.isArray(data)) {
+                setOrders(data);
+            } else if (data && data.data && Array.isArray(data.data)) {
+                // Caso a API retorne paginado dentro de um objeto 'data'
+                setOrders(data.data);
+            } else {
+                setOrders([]);
+            }
+        } catch (error) {
+            console.error('Erro ao buscar pedidos:', error);
+            toast.error('Erro ao carregar lista de pedidos');
+        } finally {
+            setLoading(false);
+        }
     };
-    return map[status] || status;
-  };
 
-  const getStatusClass = (status) => {
-    const map = {
-      'Pending': 'pendente',
-      'Processing': 'processando',
-      'Shipped': 'enviado',
-      'Delivered': 'entregue',
-      'Cancelled': 'cancelado',
-      'Pendente': 'pendente',
-      'Processando': 'processando',
-      'Enviado': 'enviado',
-      'Entregue': 'entregue',
-      'Cancelado': 'cancelado'
+    // Função para deixar o status bonito e colorido
+    const getStatusInfo = (status) => {
+        // Converte para string e minúsculo para facilitar a comparação
+        const s = String(status).toLowerCase();
+
+        // Mapeamento baseado no seu Backend (Enum ou String)
+        // Ajuste os números se o seu Enum for diferente
+        switch (s) {
+            case '1':
+            case 'paid':
+            case 'approved':
+                return { label: 'Pago', class: 'status-success', icon: <FiCheckCircle /> };
+            case '2':
+            case 'shipped':
+                return { label: 'Enviado', class: 'status-warning', icon: <FiTruck /> };
+            case '3':
+            case 'delivered':
+                return { label: 'Entregue', class: 'status-success', icon: <FiCheckCircle /> };
+            case '4':
+            case 'canceled':
+            case 'cancelled':
+                return { label: 'Cancelado', class: 'status-danger', icon: <FiXCircle /> };
+            case '0':
+            case 'pending':
+            default:
+                return { label: 'Pendente', class: 'status-warning', icon: <FiClock /> };
+        }
     };
-    return map[status] || 'pendente';
-  };
 
-  const filtered = filter === 'all' 
-    ? orders 
-    : orders.filter(o => getStatusLabel(o.status) === filter || o.status === filter);
+    // Filtragem (pelo ID ou valor)
+    const filteredOrders = orders.filter(order =>
+        (order.id && order.id.toLowerCase().includes(search.toLowerCase())) ||
+        (order.userId && order.userId.toLowerCase().includes(search.toLowerCase()))
+    );
 
-  return (
-    <div className="admin-page">
-      <div className="page-header">
-        <div>
-          <h1>Pedidos</h1>
-          <p>{orders.length} pedidos</p>
+    return (
+        <div className="admin-page">
+            <div className="page-header">
+                <div>
+                    <h1>Pedidos</h1>
+                    <p>Gerencie as vendas da loja</p>
+                </div>
+            </div>
+
+            <div className="search-box">
+                <FiSearch />
+                <input
+                    type="text"
+                    placeholder="Buscar por ID do pedido ou cliente..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                />
+            </div>
+
+            <div className="table-container">
+                <table className="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID do Pedido</th>
+                            <th>Data</th>
+                            <th>Cliente</th>
+                            <th>Valor Total</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {loading ? (
+                            <tr><td colSpan="6" className="center">Carregando pedidos...</td></tr>
+                        ) : filteredOrders.length === 0 ? (
+                            <tr><td colSpan="6" className="center">Nenhum pedido encontrado.</td></tr>
+                        ) : filteredOrders.map(order => {
+                            const statusInfo = getStatusInfo(order.status);
+                            return (
+                                <tr key={order.id}>
+                                    <td className="font-mono" title={order.id}>
+                                        #{order.id.substring(0, 8)}... {/* Mostra só o começo do ID */}
+                                    </td>
+                                    <td>
+                                        {new Date(order.orderDate || order.createdAt).toLocaleDateString('pt-BR')}
+                                    </td>
+                                    <td title={order.userId}>
+                                        {/* Tenta mostrar o nome se vier no DTO, senão mostra ID */}
+                                        {order.userName || order.firstName || order.userId?.substring(0, 8) + '...'}
+                                    </td>
+                                    <td>
+                                        {new Intl.NumberFormat('pt-BR', {
+                                            style: 'currency',
+                                            currency: 'BRL'
+                                        }).format(order.totalAmount)}
+                                    </td>
+                                    <td>
+                                        <span className={`status-badge ${statusInfo.class}`}>
+                                            {statusInfo.icon}
+                                            {statusInfo.label}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div className="actions">
+                                            <button className="btn-icon view" title="Ver Detalhes">
+                                                <FiEye />
+                                            </button>
+                                            {/* Botão de Cancelar (opcional) */}
+                                            {statusInfo.label !== 'Cancelado' && (
+                                                <button
+                                                    className="btn-icon delete"
+                                                    title="Cancelar Pedido"
+                                                    onClick={() => {
+                                                        if (window.confirm('Cancelar este pedido?')) {
+                                                            orderService.cancel(order.id).then(() => {
+                                                                toast.success('Pedido cancelado');
+                                                                loadOrders();
+                                                            });
+                                                        }
+                                                    }}
+                                                >
+                                                    <FiXCircle />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
         </div>
-      </div>
-
-      <div className="filters">
-        {['all', 'Pendente', 'Processando', 'Enviado', 'Entregue', 'Cancelado'].map(f => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`filter-btn ${filter === f ? 'active' : ''}`}
-          >
-            {f === 'all' ? 'Todos' : f}
-          </button>
-        ))}
-      </div>
-
-      <div className="table-container">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Pedido</th>
-              <th>Cliente</th>
-              <th>Itens</th>
-              <th>Total</th>
-              <th>Status</th>
-              <th>Data</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan="7" className="center">Carregando...</td></tr>
-            ) : filtered.length === 0 ? (
-              <tr><td colSpan="7" className="center">Nenhum pedido encontrado</td></tr>
-            ) : filtered.map(order => (
-              <tr key={order.id}>
-                <td>#{order.id?.substring(0, 8) || order.id}</td>
-                <td>
-                  <div>
-                    <strong>{order.user?.firstName || order.customerName || 'N/A'} {order.user?.lastName || ''}</strong>
-                    <small style={{ display: 'block', color: 'var(--text-muted)' }}>{order.user?.email || order.email || ''}</small>
-                  </div>
-                </td>
-                <td>{order.items?.length || order.itemsCount || 0}</td>
-                <td className="price">{formatPrice(order.totalAmount || order.total || 0)}</td>
-                <td><span className={`badge ${getStatusClass(order.status)}`}>{getStatusLabel(order.status)}</span></td>
-                <td>{formatDate(order.createdAt || order.date)}</td>
-                <td>
-                  <div className="actions">
-                    <button className="btn-icon" title="Ver detalhes"><FiEye /></button>
-                    {(order.status === 'Pending' || order.status === 'Pendente') && (
-                      <>
-                        <button onClick={() => updateStatus(order.id, 'Processing')} className="btn-icon edit" title="Processar"><FiCheck /></button>
-                        <button onClick={() => updateStatus(order.id, 'Cancelled')} className="btn-icon delete" title="Cancelar"><FiX /></button>
-                      </>
-                    )}
-                    {(order.status === 'Processing' || order.status === 'Processando') && (
-                      <button onClick={() => updateStatus(order.id, 'Shipped')} className="btn-icon edit" title="Marcar como enviado"><FiTruck /></button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
+    );
 };
 
 export default AdminOrders;
