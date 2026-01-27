@@ -239,6 +239,16 @@
         transition: background-color 0.2s;
     }
 
+    /* Controla o tamanho da imagem dentro das células da tabela */
+    .data-table td img {
+        width: 48px; /* Largura fixa pequena */
+        height: 48px; /* Altura fixa (quadrado) */
+        object-fit: cover; /* IMPORTANTE: Corta o excesso para não esticar a foto */
+        border-radius: 8px; /* Cantos arredondados */
+        vertical-align: middle;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2); /* Sombraeve */
+    }
+
 /* Fonte para IDs (Estilo código) */
 .font-mono {
     font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
