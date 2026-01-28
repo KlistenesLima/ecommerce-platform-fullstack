@@ -3,11 +3,14 @@ using ProjetoEcommerce.Application.Cart.DTOs.Responses;
 using System;
 using System.Threading.Tasks;
 
-public interface ICartService
+namespace ProjetoEcommerce.Application.Cart.Services
 {
-    Task<CartResponse> GetByUserAsync(Guid userId);
-    Task<CartResponse> AddItemAsync(AddToCartRequest request);
-    Task<CartResponse> RemoveItemAsync(Guid cartId, Guid productId);
-    Task<CartResponse> ClearAsync(Guid cartId);
-    Task<CartResponse> UpdateItemQuantityAsync(Guid cartId, Guid productId, int quantity);
+    public interface ICartService
+    {
+        Task<CartResponse> GetCartAsync(Guid userId);
+        Task<CartResponse> AddToCartAsync(Guid userId, AddToCartRequest request);
+        Task RemoveFromCartAsync(Guid userId, Guid productId);
+        Task ClearCartAsync(Guid userId);
+        Task<CartResponse> UpdateQuantityAsync(Guid userId, UpdateQuantityRequest request);
+    }
 }

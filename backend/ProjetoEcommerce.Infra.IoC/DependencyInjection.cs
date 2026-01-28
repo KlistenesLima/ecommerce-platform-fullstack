@@ -1,193 +1,32 @@
-using Amazon;
-using Amazon.Runtime;
-using Amazon.S3;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
+ï»¿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using ProjetoEcommerce.Application.Configuration;
-using ProjetoEcommerce.Application.Storage;
-using ProjetoEcommerce.Domain.Interfaces;
 using ProjetoEcommerce.Infra.Data.Context;
+using Microsoft.EntityFrameworkCore;
+using ProjetoEcommerce.Domain.Interfaces;
 using ProjetoEcommerce.Infra.Data.Repositories;
-using ProjetoEcommerce.Infra.Storage;
-using System;
 
-namespace ProjetoEcommerce.Infra.IoC;
-
-public static class DependencyInjection
+namespace ProjetoEcommerce.Infra.IoC
 {
-    public static IServiceCollection AddInfrastructure(
-        this IServiceCollection services,
-        IConfiguration configuration)
+    public static class DependencyInjection
     {
-        // Database
-        services.AddDatabaseConfiguration(configuration);
-
-        // Repositories
-        services.AddRepositories();
-
-        // Cache (Redis)
-        services.AddCacheServices(configuration);
-
-        // Cloud Services (AWS S3)
-        services.AddCloudServices(configuration);
-
-        // Message Queue (Kafka & RabbitMQ)
-        services.AddMessageQueueServices(configuration);
-
-        return services;
-    }
-
-    private static IServiceCollection AddDatabaseConfiguration(
-        this IServiceCollection services,
-        IConfiguration configuration)
-    {
-        var connectionString = configuration.GetConnectionString("DefaultConnection");
-
-        services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseNpgsql(connectionString, npgsqlOptions =>
-            {
-                npgsqlOptions.EnableRetryOnFailure(
-                    maxRetryCount: 3,
-                    maxRetryDelay: TimeSpan.FromSeconds(30),
-                    errorCodesToAdd: null);
-                npgsqlOptions.CommandTimeout(30);
-            }));
-
-        return services;
-    }
-
-    private static IServiceCollection AddRepositories(this IServiceCollection services)
-    {
-        services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<IProductRepository, ProductRepository>();
-        services.AddScoped<ICategoryRepository, CategoryRepository>();
-        services.AddScoped<IOrderRepository, OrderRepository>();
-        services.AddScoped<ICartRepository, CartRepository>();
-        services.AddScoped<IPaymentRepository, PaymentRepository>();
-        services.AddScoped<IShippingRepository, ShippingRepository>();
-
-        return services;
-    }
-
-    private static IServiceCollection AddCacheServices(
-        this IServiceCollection services,
-        IConfiguration configuration)
-    {
-        // Bind Redis settings
-        var redisSettings = new RedisSettings();
-        configuration.GetSection("Redis").Bind(redisSettings);
-        services.AddSingleton(redisSettings);
-
-        // StackExchange.Redis configuration
-        if (!string.IsNullOrEmpty(redisSettings.ConnectionString))
+        public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
         {
-            services.AddStackExchangeRedisCache(options =>
-            {
-                options.Configuration = redisSettings.ConnectionString;
-                options.InstanceName = "EcommerceCache:";
-            });
+            // Database - Trocado para Npgsql (Postgres)
+            services.AddDbContext<ApplicationDbContext>(options =>
+                options.UseNpgsql(
+                    configuration.GetConnectionString("DefaultConnection"),
+                    b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)));
+
+            // Repositories
+            services.AddScoped<IProductRepository, ProductRepository>();
+            services.AddScoped<ICategoryRepository, CategoryRepository>();
+            services.AddScoped<ICartRepository, CartRepository>();
+            services.AddScoped<IUserRepository, UserRepository>();
+            services.AddScoped<IOrderRepository, OrderRepository>();
+            services.AddScoped<IShippingRepository, ShippingRepository>();
+            services.AddScoped<IPaymentRepository, PaymentRepository>();
+
+            return services;
         }
-
-        return services;
-    }
-
-    public static IServiceCollection AddCloudServices(this IServiceCollection services, IConfiguration configuration)
-    {
-        var awsSettings = new AWSSettings();
-        configuration.GetSection("AWS").Bind(awsSettings);
-        services.AddSingleton(awsSettings);
-
-        if (!string.IsNullOrEmpty(awsSettings.AccessKey))
-        {
-            var s3Config = new AmazonS3Config
-            {
-                // VOLTAMOS PARA HTTPS (Porta 443)
-                ServiceURL = "https://s3.us-west-005.backblazeb2.com",
-
-                ForcePathStyle = true,
-
-                // Removemos o UseHttp=true (pois backblaze exige HTTPS)
-
-                // === A MÁGICA ACONTECE AQUI ===
-                // Usamos nossa fábrica que ignora erros de SSL
-                HttpClientFactory = new InsecureHttpClientFactory()
-            };
-
-            var credentials = new BasicAWSCredentials(
-                awsSettings.AccessKey,
-                awsSettings.SecretKey
-            );
-
-            services.AddSingleton<IAmazonS3>(sp =>
-                new AmazonS3Client(credentials, s3Config));
-        }
-        else
-        {
-            services.AddSingleton<IAmazonS3>(sp =>
-                new AmazonS3Client(new AmazonS3Config { RegionEndpoint = RegionEndpoint.USEast1 }));
-        }
-
-        services.AddScoped<IS3StorageService, S3StorageService>();
-
-        return services;
-    }
-
-    private static IServiceCollection AddMessageQueueServices(
-        this IServiceCollection services,
-        IConfiguration configuration)
-    {
-        // Bind Kafka settings
-        var kafkaSettings = new KafkaSettings();
-        configuration.GetSection("Kafka").Bind(kafkaSettings);
-        services.AddSingleton(kafkaSettings);
-
-        // Bind RabbitMQ settings
-        var rabbitSettings = new RabbitMQSettings();
-        configuration.GetSection("RabbitMQ").Bind(rabbitSettings);
-        services.AddSingleton(rabbitSettings);
-
-        return services;
     }
 }
-
-#region Settings Classes
-
-public class RedisSettings
-{
-    public string ConnectionString { get; set; } = string.Empty;
-    public int DefaultExpirationMinutes { get; set; } = 60;
-}
-
-public class KafkaSettings
-{
-    public string BootstrapServers { get; set; } = "localhost:9092";
-    public string GroupId { get; set; } = "ecommerce-group";
-}
-
-public class RabbitMQSettings
-{
-    public string HostName { get; set; } = "localhost";
-    public int Port { get; set; } = 5672;
-    public string UserName { get; set; } = "guest";
-    public string Password { get; set; } = "guest";
-    public string VirtualHost { get; set; } = "/";
-}
-
-// Cole isso no FINAL do arquivo DependencyInjection.cs, fora das chaves da classe DependencyInjection
-
-public class InsecureHttpClientFactory : Amazon.Runtime.HttpClientFactory
-{
-    public override System.Net.Http.HttpClient CreateHttpClient(Amazon.Runtime.IClientConfig clientConfig)
-    {
-        var handler = new System.Net.Http.HttpClientHandler();
-
-        // O COMANDO MÁGICO: Ignora todos os erros de certificado SSL
-        handler.ServerCertificateCustomValidationCallback =
-            (httpRequestMessage, cert, cetChain, policyErrors) => true;
-
-        var client = new System.Net.Http.HttpClient(handler);
-        return client;
-    }
-}
-#endregion

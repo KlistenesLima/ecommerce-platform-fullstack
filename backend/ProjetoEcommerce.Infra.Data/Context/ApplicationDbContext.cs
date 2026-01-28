@@ -12,7 +12,7 @@ namespace ProjetoEcommerce.Infra.Data.Context
         public DbSet<User> Users { get; set; }
         public DbSet<Product> Products { get; set; }
         public DbSet<Category> Categories { get; set; }
-        public DbSet<CartEntity> Carts { get; set; }
+        public DbSet<Cart> Carts { get; set; }
         public DbSet<CartItem> CartItems { get; set; }
         public DbSet<Order> Orders { get; set; }
         public DbSet<OrderItem> OrderItems { get; set; }
@@ -44,10 +44,10 @@ namespace ProjetoEcommerce.Infra.Data.Context
                 .OnDelete(DeleteBehavior.Restrict);
 
             // Cart Configuration
-            modelBuilder.Entity<CartEntity>()
+            modelBuilder.Entity<Cart>()
                 .HasOne(c => c.User)
                 .WithOne(u => u.Cart)
-                .HasForeignKey<CartEntity>(c => c.UserId)
+                .HasForeignKey<Cart>(c => c.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             // CartItem Configuration
@@ -107,3 +107,5 @@ namespace ProjetoEcommerce.Infra.Data.Context
         }
     }
 }
+
+

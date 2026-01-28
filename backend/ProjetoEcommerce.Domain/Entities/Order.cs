@@ -1,51 +1,52 @@
 ﻿using ProjetoEcommerce.Domain.Enums;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ProjetoEcommerce.Domain.Entities
 {
-    public class Order
+    public class Order : BaseEntity
     {
-        public Guid Id { get; set; } = Guid.NewGuid();
-        public Guid UserId { get; set; }
-        public Guid? CartId { get; set; }
-        public OrderStatus Status { get; set; } = OrderStatus.Pending;
-        public decimal TotalAmount { get; set; }
-        public string ShippingAddress { get; set; } = string.Empty;
-        public string BillingAddress { get; set; } = string.Empty;
-        public DateTime OrderDate { get; set; } = DateTime.UtcNow;
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        public DateTime? ShippedDate { get; set; }
-        public DateTime? DeliveredDate { get; set; }
-        public Guid? PaymentId { get; set; }
-        public Guid? ShippingId { get; set; }
+        public Guid UserId { get; private set; }
+        public string ShippingAddress { get; private set; }
+        public string BillingAddress { get; private set; }
+        public decimal TotalAmount { get; private set; }
+        public OrderStatus Status { get; private set; }
+        
+        // Lista de Itens
+        public virtual List<OrderItem> Items { get; private set; } = new();
 
-        public virtual User User { get; set; } = null!;
-        public virtual Payment? Payment { get; set; }
-        public virtual ShippingEntity? Shipping { get; set; }
-        public virtual ICollection<OrderItem> Items { get; set; } = new List<OrderItem>();
+        // --- PROPRIEDADES DE NAVEGAÇÃO (LINKS VIRTUAIS) ---
+        [ForeignKey("UserId")]
+        public virtual User User { get; set; } // O AutoMapper precisa disso
 
-        public Order() { }
+        // Assumindo relação 1:1 ou 1:N, ajustaremos conforme seu Payment/ShippingEntity
+        public virtual Payment Payment { get; set; }
+        public virtual ShippingEntity Shipping { get; set; } 
+        // --------------------------------------------------
 
-        public Order(Guid userId, Guid cartId, decimal totalAmount)
-        {
-            UserId = userId;
-            CartId = cartId;
-            TotalAmount = totalAmount;
-        }
+        protected Order() { }
 
         public Order(Guid userId, string shippingAddress, string billingAddress)
         {
             UserId = userId;
             ShippingAddress = shippingAddress;
             BillingAddress = billingAddress;
+            Status = OrderStatus.Pending;
+            TotalAmount = 0;
         }
 
-        public void UpdateStatus(OrderStatus newStatus)
+        public void AddItem(Guid productId, string productName, decimal unitPrice, int quantity)
         {
-            Status = newStatus;
-            if (newStatus == OrderStatus.Shipped)
-                ShippedDate = DateTime.UtcNow;
-            else if (newStatus == OrderStatus.Delivered)
-                DeliveredDate = DateTime.UtcNow;
+            var item = new OrderItem(productId, productName, unitPrice, quantity);
+            Items.Add(item);
+            TotalAmount += unitPrice * quantity;
+        }
+
+        public void UpdateStatus(OrderStatus status)
+        {
+            Status = status;
+            UpdatedAt = DateTime.UtcNow;
         }
     }
 }

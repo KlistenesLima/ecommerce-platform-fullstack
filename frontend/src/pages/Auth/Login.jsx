@@ -20,11 +20,16 @@ const Login = () => {
             const userData = await signIn(formData);
             toast.success(`Bem-vindo, ${userData.name}!`);
 
-            if (userData.role === 'admin') {
+            // --- CORREÇÃO AQUI ---
+            // O Backend manda 1 (inteiro) para Admin e 0 para Customer.
+            // Adicionei verificações extras por segurança.
+            if (userData.role === 1 || userData.role === 'Admin' || userData.role === 'admin') {
                 navigate('/admin');
             } else {
                 navigate('/');
             }
+            // ---------------------
+
         } catch (error) {
             console.error(error);
             toast.error('Email ou senha inválidos');

@@ -1,78 +1,72 @@
-﻿using ProjetoEcommerce.Domain.Entities;
-using ProjetoEcommerce.Domain.Interfaces;
+﻿using AutoMapper;
 using ProjetoEcommerce.Application.Auth.DTOs.Requests;
 using ProjetoEcommerce.Application.Auth.DTOs.Responses;
-using System.Threading.Tasks;
+using ProjetoEcommerce.Domain.Entities;
+using ProjetoEcommerce.Domain.Enums; // Importante
+using ProjetoEcommerce.Domain.Interfaces;
 using System;
-using BCrypt.Net;
+using System.Threading.Tasks;
 
 namespace ProjetoEcommerce.Application.Auth.Services
 {
-    public interface IAuthService
-    {
-        Task<AuthResponse> LoginAsync(LoginRequest request);
-        Task<AuthResponse> RegisterAsync(CreateUserRequest request);
-    }
-
     public class AuthService : IAuthService
     {
         private readonly IUserRepository _userRepository;
-        private readonly ITokenService _tokenService;
+        private readonly IJwtTokenService _tokenService;
+        private readonly IMapper _mapper;
 
-        public AuthService(IUserRepository userRepository, ITokenService tokenService)
+        public AuthService(IUserRepository userRepository, IJwtTokenService tokenService, IMapper mapper)
         {
             _userRepository = userRepository;
             _tokenService = tokenService;
+            _mapper = mapper;
         }
 
         public async Task<AuthResponse> LoginAsync(LoginRequest request)
         {
             var user = await _userRepository.GetByEmailAsync(request.Email);
-            if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
-                throw new Exception("Email ou senha inválidos");
-
-            var token = _tokenService.GenerateToken(user);
-
-            return new AuthResponse
+            if (user == null || !VerifyPassword(request.Password, user.PasswordHash))
             {
-                UserId = user.Id,
-                Email = user.Email,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Role = user.Role, 
-                Token = token,
-                ExpiresAt = DateTime.UtcNow.AddHours(1)
-            };
+                throw new Exception("Email ou senha inválidos");
+            }
+
+            var response = _mapper.Map<AuthResponse>(user);
+            // Aqui passa o objeto User inteiro, que contem o Enum Role
+            response.Token = _tokenService.GenerateToken(user);
+            
+            return response;
         }
 
         public async Task<AuthResponse> RegisterAsync(CreateUserRequest request)
         {
             var existingUser = await _userRepository.GetByEmailAsync(request.Email);
             if (existingUser != null)
+            {
                 throw new Exception("Email já cadastrado");
+            }
 
-            var user = new User(
-                request.Email,
-                BCrypt.Net.BCrypt.HashPassword(request.Password),
-                request.FirstName,
-                request.LastName,
-                request.PhoneNumber
-            );
+            var user = _mapper.Map<User>(request);
+            user.PasswordHash = HashPassword(request.Password);
+            
+            // Atribuição explícita do Enum
+            user.Role = UserRole.Customer; 
 
             await _userRepository.AddAsync(user);
 
-            var token = _tokenService.GenerateToken(user);
+            var response = _mapper.Map<AuthResponse>(user);
+            response.Token = _tokenService.GenerateToken(user);
 
-            return new AuthResponse
-            {
-                UserId = user.Id,
-                Email = user.Email,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Role = user.Role, 
-                Token = token,
-                ExpiresAt = DateTime.UtcNow.AddHours(1)
-            };
+            return response;
+        }
+
+        private string HashPassword(string password)
+        {
+            return BCrypt.Net.BCrypt.HashPassword(password);
+        }
+
+        private bool VerifyPassword(string password, string hash)
+        {
+            return BCrypt.Net.BCrypt.Verify(password, hash);
         }
     }
 }

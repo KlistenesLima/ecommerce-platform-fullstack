@@ -1,13 +1,18 @@
 import axios from 'axios';
 
+// Cria a instância do Axios
 const api = axios.create({
-    baseURL: 'https://localhost:7146/api', // Confirme se a porta é 7146 mesmo
+    // IMPORTANTE: Verifique se a porta 7146 é a correta do seu backend (estava no seu log de erro)
+    baseURL: 'https://localhost:7146/api'
 });
 
-// Interceptador: Antes de cada requisição, coloca o token no cabeçalho
-api.interceptors.request.use((config) => {
+// === INTERCEPTOR DE REQUISIÇÃO (O Segredo) ===
+// Antes de qualquer requisição sair, ele roda isso:
+api.interceptors.request.use(async (config) => {
+    // 1. Tenta pegar o token salvo no navegador
     const token = localStorage.getItem('@LuxeStore:token');
 
+    // 2. Se tiver token, injeta no cabeçalho Authorization
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
@@ -17,15 +22,18 @@ api.interceptors.request.use((config) => {
     return Promise.reject(error);
 });
 
-// Interceptador de Resposta (Opcional, mas útil): Se der 401, desloga o usuário
-api.interceptors.response.use((response) => {
+// === INTERCEPTOR DE RESPOSTA (Opcional, mas recomendado) ===
+// Se o backend devolver 401 (Token Expirado), podemos deslogar o usuário automaticamente
+api.interceptors.response.use(response => {
     return response;
-}, (error) => {
+}, error => {
     if (error.response && error.response.status === 401) {
         // Token expirou ou é inválido
-        // localStorage.removeItem('@LuxeStore:token');
+        // Opção: Forçar logout e limpar storage
         // localStorage.removeItem('@LuxeStore:user');
-        // window.location.href = '/login'; 
+        // localStorage.removeItem('@LuxeStore:token');
+        // window.location.href = '/login';
+        console.error("Sessão expirada ou não autorizada.");
     }
     return Promise.reject(error);
 });

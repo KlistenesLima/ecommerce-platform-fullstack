@@ -4,10 +4,10 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { FiCreditCard, FiMapPin, FiCheckCircle, FiArrowLeft } from 'react-icons/fi';
 import { toast } from 'react-toastify';
+import api from '../../services/api'; // <--- O IMPORT QUE FALTAVA
 import './Checkout.css';
 
 const Checkout = () => {
-    // Ajuste para pegar 'cart' conforme seu Contexto
     const { cart, clearCart } = useCart();
     const { user } = useAuth();
     const navigate = useNavigate();
@@ -15,7 +15,6 @@ const Checkout = () => {
     const [step, setStep] = useState(1); // 1: Endereço, 2: Pagamento, 3: Sucesso
     const [loading, setLoading] = useState(false);
 
-    // === CORREÇÃO DO ERRO ===
     // Garante que cartItems seja um array mesmo se cart for null
     const cartItems = cart?.items || [];
 
@@ -34,44 +33,43 @@ const Checkout = () => {
         number: '', name: '', expiry: '', cvc: ''
     });
 
-    // Simula o processamento de pagamento
+    // Processamento de pagamento REAL (Salva no banco)
     const handlePayment = async (e) => {
         e.preventDefault();
         setLoading(true);
 
         try {
-            // 1. Montar o Payload (Objeto que o Backend espera)
+            // 1. Formata o endereço como STRING única (exigência do Backend)
+            const fullAddress = `${address.street}, ${address.number} - ${address.city}/${address.state} - CEP: ${address.zip}`;
+
+            // 2. Monta o Payload exato do 'CreateOrderRequest.cs'
             const orderPayload = {
-                userId: user.id,
-                shippingAddress: {
-                    street: address.street,
-                    number: address.number,
-                    city: address.city,
-                    state: address.state,
-                    zipCode: address.zip
-                },
-                items: cart.items.map(item => ({
-                    productId: item.productId,
-                    productName: item.product.name, 
-                    quantity: item.quantity,
-                    unitPrice: item.unitPrice
-                })),
-                totalAmount: totalValue,
-                paymentMethod: "CreditCard" 
+                userId: user.id,          // Validação exige: RuleFor(x => x.UserId).NotEmpty()
+                cartId: cart.id,          // Backend usa isso para pegar os itens do banco
+                shippingAddress: fullAddress, // Tem que ser string, min 10 chars
+                billingAddress: fullAddress   // Validação exige: RuleFor(x => x.BillingAddress).NotEmpty()
             };
 
-            // 2. Chamar a API Real
-            // Certifique-se que seu backend tem a rota POST /orders
-            const response = await api.post('/orders', orderPayload);
+            console.log("Enviando Payload Correto:", orderPayload);
 
-            // 3. Sucesso
-            toast.success("Pedido salvo com sucesso!");
+            // 3. Envia
+            await api.post('/orders', orderPayload);
+
+            toast.success("Pedido realizado com sucesso!");
             clearCart();
             setStep(3);
 
         } catch (error) {
-            console.error("Erro ao salvar pedido:", error);
-            toast.error("Erro ao processar o pedido. Tente novamente.");
+            console.error("Erro API:", error);
+
+            // Tratamento de erro detalhado para validações do FluentValidation
+            if (error.response?.data?.errors) {
+                const validationErrors = Object.values(error.response.data.errors).flat();
+                validationErrors.forEach(msg => toast.error(msg));
+            } else {
+                const serverMessage = error.response?.data?.message || "Erro ao processar pedido.";
+                toast.error(serverMessage);
+            }
         } finally {
             setLoading(false);
         }
@@ -154,7 +152,7 @@ const Checkout = () => {
                         </div>
                     )}
 
-                    {/* ETAPA 2: PAGAMENTO (SIMULADO) */}
+                    {/* ETAPA 2: PAGAMENTO */}
                     {step === 2 && (
                         <div className="checkout-card animate-fade">
                             <div className="card-header">

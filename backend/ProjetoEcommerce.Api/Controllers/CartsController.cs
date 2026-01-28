@@ -1,8 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
-using ProjetoEcommerce.Application.Cart.Services;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using ProjetoEcommerce.Application.Cart.DTOs.Requests;
+using ProjetoEcommerce.Application.Cart.Services;
 using System;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace ProjetoEcommerce.Api.Controllers
@@ -19,74 +20,58 @@ namespace ProjetoEcommerce.Api.Controllers
             _cartService = cartService;
         }
 
-        [HttpGet("user/{userId}")]
-        public async Task<IActionResult> GetByUser(Guid userId)
+        [HttpGet]
+        public async Task<IActionResult> GetCart()
         {
-            try
-            {
-                var cart = await _cartService.GetByUserAsync(userId);
-                return Ok(cart);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            var userId = GetUserId();
+            // CORREÇÃO: GetByUserAsync -> GetCartAsync
+            var cart = await _cartService.GetCartAsync(userId);
+            if (cart == null) return NotFound("Carrinho vazio ou não encontrado.");
+            return Ok(cart);
         }
 
-        [HttpPost("add-item")]
+        [HttpPost("items")]
         public async Task<IActionResult> AddItem([FromBody] AddToCartRequest request)
         {
-            try
-            {
-                var cart = await _cartService.AddItemAsync(request);
-                return Ok(cart);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            var userId = GetUserId();
+            // CORREÇÃO: AddItemAsync -> AddToCartAsync
+            var cart = await _cartService.AddToCartAsync(userId, request);
+            return Ok(cart);
         }
 
-        [HttpDelete("{cartId}/items/{productId}")]
-        public async Task<IActionResult> RemoveItem(Guid cartId, Guid productId)
+        [HttpDelete("items/{productId}")]
+        public async Task<IActionResult> RemoveItem(Guid productId)
         {
-            try
-            {
-                var cart = await _cartService.RemoveItemAsync(cartId, productId);
-                return Ok(cart);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            var userId = GetUserId();
+            // CORREÇÃO: RemoveItemAsync -> RemoveFromCartAsync
+            await _cartService.RemoveFromCartAsync(userId, productId);
+            return NoContent();
         }
 
-        [HttpDelete("{cartId}/clear")]
-        public async Task<IActionResult> Clear(Guid cartId)
+        [HttpDelete]
+        public async Task<IActionResult> ClearCart()
         {
-            try
-            {
-                var cart = await _cartService.ClearAsync(cartId);
-                return Ok(cart);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            var userId = GetUserId();
+            // CORREÇÃO: ClearAsync -> ClearCartAsync
+            await _cartService.ClearCartAsync(userId);
+            return NoContent();
         }
 
-        [HttpPut("{cartId}/items/{productId}/quantity")]
-        public async Task<IActionResult> UpdateQuantity(Guid cartId, Guid productId, [FromBody] dynamic request)
+        [HttpPut("items/quantity")]
+        public async Task<IActionResult> UpdateQuantity([FromBody] UpdateQuantityRequest request)
         {
-            try
-            {
-                var cart = await _cartService.UpdateItemQuantityAsync(cartId, productId, request.quantity);
-                return Ok(cart);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            var userId = GetUserId();
+            // CORREÇÃO: UpdateItemQuantityAsync -> UpdateQuantityAsync
+            var cart = await _cartService.UpdateQuantityAsync(userId, request);
+            return Ok(cart);
+        }
+
+        private Guid GetUserId()
+        {
+            // Extrai o ID do token JWT
+            var claim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (claim == null) throw new UnauthorizedAccessException("Usuário não identificado.");
+            return Guid.Parse(claim.Value);
         }
     }
 }

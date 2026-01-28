@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using ProjetoEcommerce.Domain.Entities;
 using ProjetoEcommerce.Domain.Interfaces;
 using ProjetoEcommerce.Infra.Data.Context;
 using System;
@@ -16,49 +15,41 @@ namespace ProjetoEcommerce.Infra.Data.Repositories
             _context = context;
         }
 
-        public async Task<CartEntity?> GetByIdAsync(Guid id)
+        // Uso explícito de ProjetoEcommerce.Domain.Entities.Cart para evitar confusão
+        public async Task<ProjetoEcommerce.Domain.Entities.Cart> GetByIdAsync(Guid id)
         {
             return await _context.Carts
                 .Include(c => c.Items)
-                .ThenInclude(i => i.Product)
                 .FirstOrDefaultAsync(c => c.Id == id);
         }
 
-        public async Task<CartEntity?> GetByUserAsync(Guid userId)
+        public async Task<ProjetoEcommerce.Domain.Entities.Cart> GetByUserIdAsync(Guid userId)
         {
             return await _context.Carts
                 .Include(c => c.Items)
-                .ThenInclude(i => i.Product)
                 .FirstOrDefaultAsync(c => c.UserId == userId);
         }
 
-        public async Task<CartEntity> AddAsync(CartEntity cart)
+        public async Task AddAsync(ProjetoEcommerce.Domain.Entities.Cart cart)
         {
             await _context.Carts.AddAsync(cart);
             await _context.SaveChangesAsync();
-            return cart;
         }
 
-        public async Task<CartEntity> AddItemAsync(CartEntity cart)
-        {
-            return await AddAsync(cart);
-        }
-
-        public async Task<CartEntity> UpdateAsync(CartEntity cart)
+        public async Task UpdateAsync(ProjetoEcommerce.Domain.Entities.Cart cart)
         {
             _context.Carts.Update(cart);
             await _context.SaveChangesAsync();
-            return cart;
         }
 
-        public async Task<bool> DeleteAsync(Guid id)
+        public async Task DeleteAsync(Guid id)
         {
-            var cart = await _context.Carts.FindAsync(id);
-            if (cart == null) return false;
-
-            _context.Carts.Remove(cart);
-            await _context.SaveChangesAsync();
-            return true;
+            var cart = await GetByIdAsync(id);
+            if (cart != null)
+            {
+                _context.Carts.Remove(cart);
+                await _context.SaveChangesAsync();
+            }
         }
     }
 }

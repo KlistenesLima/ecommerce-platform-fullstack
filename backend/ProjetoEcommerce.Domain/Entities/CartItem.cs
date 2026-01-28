@@ -1,26 +1,30 @@
-﻿namespace ProjetoEcommerce.Domain.Entities
+﻿using System;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace ProjetoEcommerce.Domain.Entities
 {
-    public class CartItem
+    public class CartItem : BaseEntity
     {
-        public Guid Id { get; set; } = Guid.NewGuid();
         public Guid CartId { get; set; }
         public Guid ProductId { get; set; }
+        public string ProductName { get; set; } = string.Empty;
         public int Quantity { get; set; }
         public decimal UnitPrice { get; set; }
 
-        public virtual CartEntity Cart { get; set; } = null!;
-        public virtual Product Product { get; set; } = null!;
+        [ForeignKey("CartId")]
+        public virtual Cart Cart { get; set; } // Referência correta
+
+        [ForeignKey("ProductId")]
+        public virtual Product Product { get; set; }
 
         public CartItem() { }
 
-        public CartItem(Guid cartId, Guid productId, int quantity, decimal unitPrice)
+        public CartItem(Guid productId, string productName, decimal unitPrice, int quantity)
         {
-            CartId = cartId;
             ProductId = productId;
-            Quantity = quantity;
+            ProductName = productName;
             UnitPrice = unitPrice;
+            Quantity = quantity;
         }
-
-        public decimal Total => Quantity * UnitPrice;
     }
 }
