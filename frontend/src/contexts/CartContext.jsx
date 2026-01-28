@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-// Importação corrigida (Named Export)
-import { cartService } from '../services/cartService';
+import { cartService } from '../services/cartService'; // Importação correta (Named Export)
 import { useAuth } from './AuthContext';
 import { toast } from 'react-toastify';
 
@@ -18,15 +17,14 @@ export const CartProvider = ({ children }) => {
     const [cart, setCart] = useState({ items: [], total: 0 });
     const [loading, setLoading] = useState(false);
 
-    // --- CORREÇÃO AQUI ---
-    // O AuthContext usa 'signed', mas a gente quer chamar de 'isAuthenticated' aqui dentro.
-    // Fizemos um alias (apelido) na desestruturação.
+    // --- CORREÇÃO CRÍTICA ---
+    // Mapeamos 'signed' (do AuthContext) para 'isAuthenticated' (usado aqui)
     const { signed: isAuthenticated } = useAuth();
-    // ---------------------
+    // ------------------------
 
-    // Debug: Agora deve mostrar true ou false, e não undefined
+    // Debug: Monitora se o usuário logou/deslogou
     useEffect(() => {
-        console.log("CartContext: Estado de Autenticação mudou ->", isAuthenticated);
+        console.log("CartContext: Estado de Autenticação ->", isAuthenticated);
 
         if (isAuthenticated) {
             loadCart();
@@ -38,7 +36,7 @@ export const CartProvider = ({ children }) => {
         }
     }, [isAuthenticated]);
 
-    // Salvar no localStorage quando não autenticado
+    // Salvar no localStorage APENAS se estiver offline/deslogado
     useEffect(() => {
         if (!isAuthenticated) {
             localStorage.setItem('cart', JSON.stringify(cart));
@@ -50,7 +48,7 @@ export const CartProvider = ({ children }) => {
             setLoading(true);
             console.log("CartContext: Buscando carrinho no Backend...");
             const data = await cartService.getCart();
-            console.log("CartContext: Carrinho recebido do Backend:", data);
+            console.log("CartContext: Carrinho recebido:", data);
             setCart(data);
         } catch (error) {
             console.error('Erro ao carregar carrinho:', error);
@@ -60,16 +58,18 @@ export const CartProvider = ({ children }) => {
     };
 
     const addToCart = async (product, quantity = 1) => {
-        console.log(`CartContext: Tentando adicionar ${product.name}. Autenticado? ${isAuthenticated}`);
+        console.log(`CartContext: Adicionando ${product.name}. Autenticado? ${isAuthenticated}`);
 
         try {
             if (isAuthenticated) {
-                console.log("CartContext: Enviando requisição POST para API...");
+                // --- CONEXÃO COM O BACKEND ---
+                console.log("CartContext: Enviando para API...");
                 const data = await cartService.addItem(product.id, quantity);
-                console.log("CartContext: Sucesso! Banco atualizado. Novo carrinho:", data);
+                console.log("CartContext: Sucesso! Banco atualizado.", data);
                 setCart(data);
+                // -----------------------------
             } else {
-                console.log("CartContext: Usuário Offline. Salvando localmente.");
+                console.log("CartContext: Offline. Salvando localmente.");
                 setCart((prev) => {
                     const currentItems = prev.items || [];
                     const existingItem = currentItems.find((item) => item.productId === product.id);
@@ -93,6 +93,8 @@ export const CartProvider = ({ children }) => {
                             {
                                 productId: product.id,
                                 product,
+                                name: product.name,
+                                imageUrl: product.imageUrl,
                                 quantity,
                                 unitPrice: product.price
                             }
@@ -155,7 +157,7 @@ export const CartProvider = ({ children }) => {
                     };
                 });
             }
-            toast.info('Produto removido do carrinho');
+            toast.info('Produto removido');
         } catch (error) {
             toast.error('Erro ao remover produto');
             console.error(error);
