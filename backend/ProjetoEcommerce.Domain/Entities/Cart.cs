@@ -1,27 +1,45 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
+using System.Linq;
 
 namespace ProjetoEcommerce.Domain.Entities
 {
     public class Cart : BaseEntity
     {
-        public Guid UserId { get; set; }
-        public DateTime? ExpiresAt { get; set; }
-        
-        public virtual ICollection<CartItem> Items { get; set; } = new List<CartItem>();
+        public Guid UserId { get; private set; }
+        public DateTime? ExpiresAt { get; private set; }
 
-        // --- PROPRIEDADE DE NAVEGAÇÃO ---
-        [ForeignKey("UserId")]
+        // Inicializa a lista para não dar NullReferenceException
+        public virtual ICollection<CartItem> Items { get; private set; } = new List<CartItem>();
         public virtual User User { get; set; }
-        // -------------------------------
 
-        public Cart() { }
-        
+        protected Cart() { } // Para o EF Core
+
+        // Construtor que usamos no Service
         public Cart(Guid userId)
         {
             UserId = userId;
+            CreatedAt = DateTime.UtcNow;
+            ExpiresAt = DateTime.UtcNow.AddDays(7); // Carrinho expira em 7 dias, por exemplo
             Items = new List<CartItem>();
         }
+
+        public void AddItem(Product product, int quantity)
+        {
+            Items.Add(new CartItem(this.Id, product, quantity));
+        }
+
+        public void RemoveItem(Guid productId)
+        {
+            var item = Items.FirstOrDefault(x => x.ProductId == productId);
+            if (item != null) Items.Remove(item);
+        }
+
+        public void Clear()
+        {
+            Items.Clear();
+        }
+
+        public decimal TotalAmount => Items.Sum(i => i.TotalPrice);
     }
 }

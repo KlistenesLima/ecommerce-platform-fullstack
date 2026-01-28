@@ -1,5 +1,4 @@
 ﻿using System;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ProjetoEcommerce.Domain.Entities
 {
@@ -11,18 +10,14 @@ namespace ProjetoEcommerce.Domain.Entities
         public decimal UnitPrice { get; private set; }
         public int Quantity { get; private set; }
 
-        [ForeignKey("OrderId")]
         public virtual Order Order { get; set; }
-
-        // --- PROPRIEDADE DE NAVEGAÇÃO ---
-        [ForeignKey("ProductId")]
-        public virtual Product Product { get; set; } 
-        // -------------------------------
+        public virtual Product Product { get; set; }
 
         protected OrderItem() { }
 
-        public OrderItem(Guid productId, string productName, decimal unitPrice, int quantity)
+        public OrderItem(Guid orderId, Guid productId, string productName, decimal unitPrice, int quantity)
         {
+            OrderId = orderId;
             ProductId = productId;
             ProductName = productName;
             UnitPrice = unitPrice;

@@ -1,7 +1,7 @@
 ﻿using ProjetoEcommerce.Domain.Enums;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
+using System.Linq;
 
 namespace ProjetoEcommerce.Domain.Entities
 {
@@ -13,34 +13,28 @@ namespace ProjetoEcommerce.Domain.Entities
         public decimal TotalAmount { get; private set; }
         public OrderStatus Status { get; private set; }
         
-        // Lista de Itens
-        public virtual List<OrderItem> Items { get; private set; } = new();
-
-        // --- PROPRIEDADES DE NAVEGAÇÃO (LINKS VIRTUAIS) ---
-        [ForeignKey("UserId")]
-        public virtual User User { get; set; } // O AutoMapper precisa disso
-
-        // Assumindo relação 1:1 ou 1:N, ajustaremos conforme seu Payment/ShippingEntity
+        // Relacionamentos
+        public virtual User User { get; set; }
+        public virtual ICollection<OrderItem> Items { get; private set; } = new List<OrderItem>();
         public virtual Payment Payment { get; set; }
-        public virtual ShippingEntity Shipping { get; set; } 
-        // --------------------------------------------------
+        public virtual ShippingEntity Shipping { get; set; }
 
-        protected Order() { }
+        protected Order() { } // Necessário para o EF Core
 
-        public Order(Guid userId, string shippingAddress, string billingAddress)
+        // O Construtor que o Service está chamando
+        public Order(Guid userId, string shippingAddress, string billingAddress, decimal totalAmount)
         {
             UserId = userId;
             ShippingAddress = shippingAddress;
             BillingAddress = billingAddress;
+            TotalAmount = totalAmount;
             Status = OrderStatus.Pending;
-            TotalAmount = 0;
+            CreatedAt = DateTime.UtcNow;
         }
 
         public void AddItem(Guid productId, string productName, decimal unitPrice, int quantity)
         {
-            var item = new OrderItem(productId, productName, unitPrice, quantity);
-            Items.Add(item);
-            TotalAmount += unitPrice * quantity;
+            Items.Add(new OrderItem(this.Id, productId, productName, unitPrice, quantity));
         }
 
         public void UpdateStatus(OrderStatus status)

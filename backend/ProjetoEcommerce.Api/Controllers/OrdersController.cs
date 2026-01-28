@@ -2,8 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using ProjetoEcommerce.Application.Orders.DTOs.Requests;
 using ProjetoEcommerce.Application.Orders.Services;
-using ProjetoEcommerce.Infra.MessageQueue.RabbitMQ;
-using ProjetoEcommerce.Api.Workers; // Para ver o novo DTO
+using ProjetoEcommerce.Domain.Enums;
 using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -16,66 +15,70 @@ namespace ProjetoEcommerce.Api.Controllers
     public class OrdersController : ControllerBase
     {
         private readonly IOrderService _orderService;
-        private readonly IRabbitMQPublisher _publisher;
 
-        public OrdersController(IOrderService orderService, IRabbitMQPublisher publisher)
+        public OrdersController(IOrderService orderService)
         {
             _orderService = orderService;
-            _publisher = publisher;
-        }
-
-        [HttpGet]
-        public async Task<IActionResult> GetAllOrders()
-        {
-            var orders = await _orderService.GetAllAsync();
-            return Ok(orders);
         }
 
         [HttpPost]
         public async Task<IActionResult> CreateOrder([FromBody] CreateOrderRequest request)
         {
-            try
+            try 
             {
-                var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? Guid.Empty.ToString());
-                
-                // Tenta pegar o email do token (se tiver claim de email) ou usa mock
-                var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "cliente@teste.com";
-                var userName = User.Identity?.Name ?? "Cliente VIP";
-
+                var userId = GetUserId();
+                // O Service usa esse ID real, ignorando qualquer coisa que venha no JSON
                 var order = await _orderService.CreateOrderAsync(userId, request);
-
-                // === NOTIFICAÇÃO COMPLETA ===
-                try 
-                {
-                    var notification = new NotificationDTO
-                    {
-                        OrderId = order.Id,
-                        CustomerName = userName,
-                        Phone = "(11) 99999-9999", 
-                        Email = userEmail,
-                        Message = $"Seu pedido no valor de {order.TotalAmount:C} foi recebido com sucesso!"
-                    };
-
-                    await _publisher.PublishAsync("", "sms_notifications_queue", notification);
-                }
-                catch(Exception ex)
-                {
-                    Console.WriteLine($"[ERRO FILA] {ex.Message}");
-                }
-
-                return CreatedAtAction(nameof(GetOrder), new { id = order.Id }, order);
+                return CreatedAtAction(nameof(GetOrderById), new { id = order.Id }, order);
             }
-            catch (InvalidOperationException ex)
+            catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                // Retorna o erro real para o Frontend ver (ajuda no debug)
+                return StatusCode(500, new { Error = ex.Message, Stack = ex.StackTrace });
             }
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetOrder(Guid id)
+        public async Task<IActionResult> GetOrderById(Guid id)
         {
-            var order = await _orderService.GetOrderAsync(id);
-            return order == null ? NotFound() : Ok(order);
+            var order = await _orderService.GetOrderByIdAsync(id);
+            if (order == null) return NotFound();
+            return Ok(order);
         }
+
+        [HttpGet("my-orders")]
+        public async Task<IActionResult> GetMyOrders()
+        {
+            var userId = GetUserId();
+            var orders = await _orderService.GetUserOrdersAsync(userId);
+            return Ok(orders);
+        }
+
+        [HttpPatch("{id}/status")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] UpdateOrderStatusRequest request)
+        {
+            var order = await _orderService.UpdateOrderStatusAsync(id, request.Status);
+            return Ok(order);
+        }
+
+        private Guid GetUserId()
+        {
+            // Tenta achar pelo NameIdentifier (Padrão JWT)
+            var claim = User.FindFirst(ClaimTypes.NameIdentifier);
+            
+            // Fallback: Tenta achar pelo "sub" ou "id" se o NameIdentifier falhar
+            if (claim == null) claim = User.FindFirst("sub");
+            if (claim == null) claim = User.FindFirst("id");
+
+            if (claim == null) throw new UnauthorizedAccessException("ID do usuário não encontrado no Token.");
+            
+            return Guid.Parse(claim.Value);
+        }
+    }
+
+    public class UpdateOrderStatusRequest
+    {
+        public OrderStatus Status { get; set; }
     }
 }
