@@ -1,107 +1,227 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
 import { useCart } from '../../contexts/CartContext';
-import { orderService } from '../../services';
+import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { FiCreditCard, FiMapPin, FiCheckCircle, FiArrowLeft } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import './Checkout.css';
 
 const Checkout = () => {
-  const { cart, clearCart } = useCart();
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+    // Ajuste para pegar 'cart' conforme seu Contexto
+    const { cart, clearCart } = useCart();
+    const { user } = useAuth();
+    const navigate = useNavigate();
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price);
-  };
+    const [step, setStep] = useState(1); // 1: Endereço, 2: Pagamento, 3: Sucesso
+    const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      setLoading(true);
-      // await orderService.create({ ... });
-      toast.success('Pedido realizado com sucesso!');
-      clearCart();
-      navigate('/orders');
-    } catch (error) {
-      toast.error('Erro ao processar pedido');
-    } finally {
-      setLoading(false);
+    // === CORREÇÃO DO ERRO ===
+    // Garante que cartItems seja um array mesmo se cart for null
+    const cartItems = cart?.items || [];
+
+    // Calcula total
+    const totalValue = cart?.total || cartItems.reduce((acc, item) => acc + item.unitPrice * item.quantity, 0);
+
+    const formatPrice = (price) => {
+        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price);
+    };
+
+    const [address, setAddress] = useState({
+        zip: '', street: '', number: '', city: '', state: ''
+    });
+
+    const [card, setCard] = useState({
+        number: '', name: '', expiry: '', cvc: ''
+    });
+
+    // Simula o processamento de pagamento
+    const handlePayment = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+
+        try {
+            // 1. Montar o Payload (Objeto que o Backend espera)
+            const orderPayload = {
+                userId: user.id,
+                shippingAddress: {
+                    street: address.street,
+                    number: address.number,
+                    city: address.city,
+                    state: address.state,
+                    zipCode: address.zip
+                },
+                items: cart.items.map(item => ({
+                    productId: item.productId,
+                    productName: item.product.name, 
+                    quantity: item.quantity,
+                    unitPrice: item.unitPrice
+                })),
+                totalAmount: totalValue,
+                paymentMethod: "CreditCard" 
+            };
+
+            // 2. Chamar a API Real
+            // Certifique-se que seu backend tem a rota POST /orders
+            const response = await api.post('/orders', orderPayload);
+
+            // 3. Sucesso
+            toast.success("Pedido salvo com sucesso!");
+            clearCart();
+            setStep(3);
+
+        } catch (error) {
+            console.error("Erro ao salvar pedido:", error);
+            toast.error("Erro ao processar o pedido. Tente novamente.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Se não tiver itens e não estiver na tela de sucesso, avisa
+    if (cartItems.length === 0 && step !== 3) {
+        return (
+            <div className="checkout-page">
+                <div className="container empty-checkout">
+                    <h2>Seu carrinho está vazio.</h2>
+                    <button className="btn-back" onClick={() => navigate('/products')}>
+                        Voltar para Produtos
+                    </button>
+                </div>
+            </div>
+        );
     }
-  };
 
-  const total = cart.items.reduce((acc, item) => acc + item.unitPrice * item.quantity, 0);
+    return (
+        <main className="checkout-page">
+            <div className="container">
 
-  return (
-    <main className="checkout-page">
-      <div className="container">
-        <h1>Finalizar Compra</h1>
-        
-        <div className="checkout-content">
-          <form onSubmit={handleSubmit} className="checkout-form">
-            <div className="form-section">
-              <h3>Endereço de Entrega</h3>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>CEP</label>
-                  <input type="text" className="form-control" placeholder="00000-000" required />
+                {/* Indicador de Passos */}
+                <div className="steps-indicator">
+                    <div className={`step ${step >= 1 ? 'active' : ''}`}>1. Endereço</div>
+                    <div className="line"></div>
+                    <div className={`step ${step >= 2 ? 'active' : ''}`}>2. Pagamento</div>
+                    <div className="line"></div>
+                    <div className={`step ${step >= 3 ? 'active' : ''}`}>3. Conclusão</div>
                 </div>
-              </div>
-              <div className="form-group">
-                <label>Endereço</label>
-                <input type="text" className="form-control" placeholder="Rua, número" required />
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Cidade</label>
-                  <input type="text" className="form-control" required />
+
+                <div className="checkout-container">
+
+                    {/* ETAPA 1: ENDEREÇO */}
+                    {step === 1 && (
+                        <div className="checkout-card animate-fade">
+                            <div className="card-header">
+                                <h2><FiMapPin /> Endereço de Entrega</h2>
+                            </div>
+
+                            <form onSubmit={(e) => { e.preventDefault(); setStep(2); }}>
+                                <div className="form-group">
+                                    <label>CEP</label>
+                                    <input required type="text" placeholder="00000-000" className="form-control"
+                                        value={address.zip} onChange={e => setAddress({ ...address, zip: e.target.value })} />
+                                </div>
+
+                                <div className="form-row">
+                                    <div className="form-group" style={{ flex: 2 }}>
+                                        <label>Rua / Avenida</label>
+                                        <input required type="text" placeholder="Ex: Av. Paulista" className="form-control"
+                                            value={address.street} onChange={e => setAddress({ ...address, street: e.target.value })} />
+                                    </div>
+                                    <div className="form-group" style={{ flex: 1 }}>
+                                        <label>Número</label>
+                                        <input required type="text" placeholder="123" className="form-control"
+                                            value={address.number} onChange={e => setAddress({ ...address, number: e.target.value })} />
+                                    </div>
+                                </div>
+
+                                <div className="form-row">
+                                    <div className="form-group">
+                                        <label>Cidade</label>
+                                        <input required type="text" placeholder="Cidade" className="form-control"
+                                            value={address.city} onChange={e => setAddress({ ...address, city: e.target.value })} />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Estado</label>
+                                        <input required type="text" placeholder="UF" className="form-control"
+                                            value={address.state} onChange={e => setAddress({ ...address, state: e.target.value })} />
+                                    </div>
+                                </div>
+
+                                <div className="checkout-footer">
+                                    <button type="button" className="btn-secondary" onClick={() => navigate('/cart')}>Voltar</button>
+                                    <button type="submit" className="btn-primary">Ir para Pagamento</button>
+                                </div>
+                            </form>
+                        </div>
+                    )}
+
+                    {/* ETAPA 2: PAGAMENTO (SIMULADO) */}
+                    {step === 2 && (
+                        <div className="checkout-card animate-fade">
+                            <div className="card-header">
+                                <h2><FiCreditCard /> Dados do Pagamento</h2>
+                                <span className="total-badge">{formatPrice(totalValue)}</span>
+                            </div>
+
+                            <form onSubmit={handlePayment}>
+                                <div className="form-group">
+                                    <label>Número do Cartão</label>
+                                    <input required type="text" placeholder="0000 0000 0000 0000" className="form-control" maxLength="19"
+                                        value={card.number} onChange={e => setCard({ ...card, number: e.target.value })} />
+                                </div>
+                                <div className="form-group">
+                                    <label>Nome no Cartão</label>
+                                    <input required type="text" placeholder="COMO NO CARTAO" className="form-control"
+                                        value={card.name} onChange={e => setCard({ ...card, name: e.target.value })} />
+                                </div>
+                                <div className="form-row">
+                                    <div className="form-group">
+                                        <label>Validade</label>
+                                        <input required type="text" placeholder="MM/AA" className="form-control" maxLength="5"
+                                            value={card.expiry} onChange={e => setCard({ ...card, expiry: e.target.value })} />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>CVV</label>
+                                        <input required type="text" placeholder="123" className="form-control" maxLength="3"
+                                            value={card.cvc} onChange={e => setCard({ ...card, cvc: e.target.value })} />
+                                    </div>
+                                </div>
+
+                                <div className="payment-warning">
+                                    <small>ℹ️ Ambiente de Teste: Nenhuma cobrança real será feita.</small>
+                                </div>
+
+                                <div className="checkout-footer">
+                                    <button type="button" className="btn-secondary" onClick={() => setStep(1)}>Voltar</button>
+                                    <button type="submit" className="btn-primary" disabled={loading}>
+                                        {loading ? 'Processando...' : `Pagar ${formatPrice(totalValue)}`}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    )}
+
+                    {/* ETAPA 3: SUCESSO */}
+                    {step === 3 && (
+                        <div className="checkout-success animate-fade">
+                            <div className="success-content">
+                                <FiCheckCircle className="success-icon" />
+                                <h1>Pedido Confirmado!</h1>
+                                <p>Obrigado, {user?.name || 'Cliente'}.</p>
+                                <p>Seu pedido foi processado e será enviado para:</p>
+                                <div className="address-confirm">
+                                    <strong>{address.street}, {address.number}</strong><br />
+                                    {address.city} - {address.state}<br />
+                                    {address.zip}
+                                </div>
+                                <button className="btn-primary" onClick={() => navigate('/')}>Voltar para Loja</button>
+                            </div>
+                        </div>
+                    )}
+
                 </div>
-                <div className="form-group">
-                  <label>Estado</label>
-                  <input type="text" className="form-control" required />
-                </div>
-              </div>
             </div>
-
-            <div className="form-section">
-              <h3>Pagamento</h3>
-              <div className="form-group">
-                <label>Número do Cartão</label>
-                <input type="text" className="form-control" placeholder="0000 0000 0000 0000" required />
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Validade</label>
-                  <input type="text" className="form-control" placeholder="MM/AA" required />
-                </div>
-                <div className="form-group">
-                  <label>CVV</label>
-                  <input type="text" className="form-control" placeholder="000" required />
-                </div>
-              </div>
-            </div>
-
-            <button type="submit" className="btn btn-primary btn-lg btn-block" disabled={loading}>
-              {loading ? 'Processando...' : `Pagar ${formatPrice(total)}`}
-            </button>
-          </form>
-
-          <div className="order-summary">
-            <h3>Resumo do Pedido</h3>
-            {cart.items.map(item => (
-              <div key={item.productId} className="summary-item">
-                <span>{item.product?.name} x{item.quantity}</span>
-                <span>{formatPrice(item.unitPrice * item.quantity)}</span>
-              </div>
-            ))}
-            <div className="summary-total">
-              <span>Total</span>
-              <span>{formatPrice(total)}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </main>
-  );
+        </main>
+    );
 };
 
 export default Checkout;
