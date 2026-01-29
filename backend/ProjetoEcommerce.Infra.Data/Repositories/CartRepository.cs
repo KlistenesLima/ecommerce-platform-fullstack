@@ -17,7 +17,7 @@ namespace ProjetoEcommerce.Infra.Data.Repositories
         public async Task<Cart?> GetByUserAsync(Guid userId)
         {
             return await _dbSet
-                .Include(c => c.Items)
+                .Include(c => c.Items).ThenInclude(c => c.Product)
                 .FirstOrDefaultAsync(c => c.UserId == userId);
         }
 

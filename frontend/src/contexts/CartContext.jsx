@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { cartService } from '../services/cartService'; // Importação correta (Named Export)
+import { cartService } from '../services/cartService';
 import { useAuth } from './AuthContext';
 import { toast } from 'react-toastify';
 
@@ -14,15 +14,11 @@ export const useCart = () => {
 };
 
 export const CartProvider = ({ children }) => {
-    const [cart, setCart] = useState({ items: [], total: 0 });
+    const [cart, setCart] = useState({ items: [], totalPrice: 0 });
     const [loading, setLoading] = useState(false);
 
-    // --- CORREÇÃO CRÍTICA ---
-    // Mapeamos 'signed' (do AuthContext) para 'isAuthenticated' (usado aqui)
     const { signed: isAuthenticated } = useAuth();
-    // ------------------------
 
-    // Debug: Monitora se o usuário logou/deslogou
     useEffect(() => {
         console.log("CartContext: Estado de Autenticação ->", isAuthenticated);
 
@@ -36,7 +32,6 @@ export const CartProvider = ({ children }) => {
         }
     }, [isAuthenticated]);
 
-    // Salvar no localStorage APENAS se estiver offline/deslogado
     useEffect(() => {
         if (!isAuthenticated) {
             localStorage.setItem('cart', JSON.stringify(cart));
@@ -62,12 +57,10 @@ export const CartProvider = ({ children }) => {
 
         try {
             if (isAuthenticated) {
-                // --- CONEXÃO COM O BACKEND ---
                 console.log("CartContext: Enviando para API...");
                 const data = await cartService.addItem(product.id, quantity);
                 console.log("CartContext: Sucesso! Banco atualizado.", data);
                 setCart(data);
-                // -----------------------------
             } else {
                 console.log("CartContext: Offline. Salvando localmente.");
                 setCart((prev) => {
@@ -75,31 +68,40 @@ export const CartProvider = ({ children }) => {
                     const existingItem = currentItems.find((item) => item.productId === product.id);
 
                     if (existingItem) {
+                        const newItems = currentItems.map((item) =>
+                            item.productId === product.id
+                                ? {
+                                    ...item,
+                                    quantity: item.quantity + quantity,
+                                    total: (item.quantity + quantity) * item.unitPrice
+                                }
+                                : item
+                        );
                         return {
                             ...prev,
-                            items: currentItems.map((item) =>
-                                item.productId === product.id
-                                    ? { ...item, quantity: item.quantity + quantity }
-                                    : item
-                            ),
-                            total: prev.total + product.price * quantity
+                            items: newItems,
+                            totalPrice: newItems.reduce((acc, item) => acc + item.total, 0)
                         };
                     }
 
+                    const newItem = {
+                        productId: product.id,
+                        product: {
+                            id: product.id,
+                            name: product.name,
+                            imageUrl: product.imageUrl,
+                            categoryName: product.categoryName || ''
+                        },
+                        quantity,
+                        unitPrice: product.price,
+                        total: product.price * quantity
+                    };
+
+                    const newItems = [...currentItems, newItem];
                     return {
                         ...prev,
-                        items: [
-                            ...currentItems,
-                            {
-                                productId: product.id,
-                                product,
-                                name: product.name,
-                                imageUrl: product.imageUrl,
-                                quantity,
-                                unitPrice: product.price
-                            }
-                        ],
-                        total: prev.total + product.price * quantity
+                        items: newItems,
+                        totalPrice: newItems.reduce((acc, item) => acc + item.total, 0)
                     };
                 });
             }
@@ -121,16 +123,15 @@ export const CartProvider = ({ children }) => {
                 setCart(data);
             } else {
                 setCart((prev) => {
-                    const item = prev.items.find((i) => i.productId === productId);
-                    if (!item) return prev;
-                    const diff = quantity - item.quantity;
-
+                    const newItems = prev.items.map((item) =>
+                        item.productId === productId
+                            ? { ...item, quantity, total: quantity * item.unitPrice }
+                            : item
+                    );
                     return {
                         ...prev,
-                        items: prev.items.map((i) =>
-                            i.productId === productId ? { ...i, quantity } : i
-                        ),
-                        total: prev.total + item.unitPrice * diff
+                        items: newItems,
+                        totalPrice: newItems.reduce((acc, item) => acc + item.total, 0)
                     };
                 });
             }
@@ -147,13 +148,11 @@ export const CartProvider = ({ children }) => {
                 setCart(data);
             } else {
                 setCart((prev) => {
-                    const item = prev.items.find((i) => i.productId === productId);
-                    if (!item) return prev;
-
+                    const newItems = prev.items.filter((item) => item.productId !== productId);
                     return {
                         ...prev,
-                        items: prev.items.filter((i) => i.productId !== productId),
-                        total: prev.total - item.unitPrice * item.quantity
+                        items: newItems,
+                        totalPrice: newItems.reduce((acc, item) => acc + item.total, 0)
                     };
                 });
             }
@@ -169,7 +168,7 @@ export const CartProvider = ({ children }) => {
             if (isAuthenticated) {
                 await cartService.clear();
             }
-            setCart({ items: [], total: 0 });
+            setCart({ items: [], totalPrice: 0 });
         } catch (error) {
             console.error(error);
         }

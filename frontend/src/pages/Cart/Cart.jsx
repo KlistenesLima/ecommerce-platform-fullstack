@@ -6,12 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import './Cart.css';
 
 const Cart = () => {
-    // Nota: Certifique-se de que seu CartContext retorna 'cart' (com .items dentro) 
-    // ou ajuste aqui para const { cartItems } = useCart() se for direto.
-    // Mantive a estrutura do seu código original (cart.items).
     const { cart, updateQuantity, removeFromCart, clearCart, itemCount } = useCart();
-
-    // Usamos 'signed' porque foi assim que definimos no AuthContext
     const { signed } = useAuth();
     const navigate = useNavigate();
 
@@ -22,18 +17,14 @@ const Cart = () => {
         }).format(price);
     };
 
-    // Função inteligente de Checkout
     const handleCheckout = () => {
         if (signed) {
-            // Se logado, vai pagar
             navigate('/checkout');
         } else {
-            // Se não, vai logar (e o Login pode redirecionar de volta se você configurar)
             navigate('/login');
         }
     };
 
-    // Verificação de segurança para evitar erro se cart for null
     if (!cart?.items || cart.items.length === 0) {
         return (
             <main className="cart-page">
@@ -51,9 +42,8 @@ const Cart = () => {
         );
     }
 
-    // Calcula o total (caso o contexto não forneça cartTotal pronto)
     const calculateTotal = () => {
-        return cart.total || cart.items.reduce((acc, item) => acc + item.unitPrice * item.quantity, 0);
+        return cart.totalPrice || cart.items.reduce((acc, item) => acc + item.total, 0);
     };
 
     return (
@@ -71,14 +61,17 @@ const Cart = () => {
                         {cart.items.map((item) => (
                             <div key={item.productId} className="cart-item">
                                 <div className="item-image">
-                                    <img src={item.product?.imageUrl || 'https://via.placeholder.com/120'} alt={item.product?.name} />
+                                    <img
+                                        src={item.product?.imageUrl || 'https://via.placeholder.com/120'}
+                                        alt={item.product?.name}
+                                    />
                                 </div>
 
                                 <div className="item-details">
                                     <Link to={`/products/${item.productId}`} className="item-name">
-                                        {item.product?.name || 'Produto'}
+                                        {item.product?.name}
                                     </Link>
-                                    <span className="item-category">{item.product?.category?.name}</span>
+                                    <span className="item-category">{item.product?.categoryName}</span>
                                     <span className="item-unit-price">{formatPrice(item.unitPrice)} / un</span>
                                 </div>
 
@@ -93,7 +86,7 @@ const Cart = () => {
                                 </div>
 
                                 <div className="item-total">
-                                    {formatPrice(item.unitPrice * item.quantity)}
+                                    {formatPrice(item.total)}
                                 </div>
 
                                 <button
@@ -126,7 +119,6 @@ const Cart = () => {
                             <span>{formatPrice(calculateTotal())}</span>
                         </div>
 
-                        {/* === AQUI ESTÁ A LÓGICA INTELIGENTE === */}
                         <button className="btn btn-primary btn-block" onClick={handleCheckout}>
                             {signed ? (
                                 <>Finalizar Compra <FiArrowRight /></>
