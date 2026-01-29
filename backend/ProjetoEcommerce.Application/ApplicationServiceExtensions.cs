@@ -1,66 +1,53 @@
-using FluentValidation;
+﻿using FluentValidation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using ProjetoEcommerce.Application.Auth.Services;
+using ProjetoEcommerce.Application.Cart.Services;
 using ProjetoEcommerce.Application.Categories.Services;
+using ProjetoEcommerce.Application.Configuration;
+using ProjetoEcommerce.Application.Mappings;
 using ProjetoEcommerce.Application.Orders.Services;
 using ProjetoEcommerce.Application.Payments.Services;
 using ProjetoEcommerce.Application.Products.Services;
-using ProjetoEcommerce.Application.Shipping.Services;
+// CORREÇÃO: Usando o namespace PLURAL correto
+using ProjetoEcommerce.Application.Shippings.Services; 
+using ProjetoEcommerce.Application.Storage;
 using ProjetoEcommerce.Application.Users.Services;
-using System;
-using System.Reflection;
+using ProjetoEcommerce.Application.Validations;
 
-namespace ProjetoEcommerce.Application;
-
-public static class ApplicationServiceExtensions
+namespace ProjetoEcommerce.Application
 {
-    public static IServiceCollection AddApplication(
-        this IServiceCollection services,
-        IConfiguration configuration)
+    public static class ApplicationServiceExtensions
     {
-        // AutoMapper
-        services.AddAutoMapperConfiguration();
-
-        // FluentValidation
-        services.AddValidationConfiguration();
-
-        // Application Services
-        services.AddApplicationServices();
-
-        return services;
-    }
-
-    private static IServiceCollection AddAutoMapperConfiguration(this IServiceCollection services)
-    {
-        services.AddAutoMapper(cfg =>
+        public static IServiceCollection AddApplication(this IServiceCollection services, IConfiguration configuration)
         {
-            cfg.AllowNullCollections = true;
-            cfg.AllowNullDestinationValues = true;
-        }, AppDomain.CurrentDomain.GetAssemblies());
+            services.AddAutoMapper(typeof(MappingProfile));
+            services.AddValidatorsFromAssemblyContaining<CreateUserValidator>();
 
-        return services;
-    }
+            services.AddScoped<IAuthService, AuthService>();
+            services.AddScoped<IJwtTokenService, JwtTokenService>();
+            services.AddScoped<IUserService, UserService>();
+            services.AddScoped<IProductService, ProductService>();
+            services.AddScoped<ICategoryService, CategoryService>();
+            services.AddScoped<ICartService, CartService>();
+            services.AddScoped<IOrderService, OrderService>();
+            services.AddScoped<IPaymentService, PaymentService>();
+            
+            // O tipo agora será encontrado corretamente
+            services.AddScoped<IShippingService, ShippingService>();
 
-    private static IServiceCollection AddValidationConfiguration(this IServiceCollection services)
-    {
-        // FluentValidation - registra todos os validators do assembly
-        services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
+            services.Configure<AWSSettings>(settings =>
+            {
+                var section = configuration.GetSection("AWS");
+                settings.AccessKey = section["AccessKey"];
+                settings.SecretKey = section["SecretKey"];
+                settings.ServiceUrl = section["ServiceUrl"];
+                settings.S3BucketName = section["S3BucketName"];
+            });
 
-        return services;
-    }
+            services.AddScoped<IS3StorageService, S3StorageService>();
 
-    private static IServiceCollection AddApplicationServices(this IServiceCollection services)
-    {
-        services.AddScoped<IUserService, UserService>();
-        services.AddScoped<IProductService, ProductService>();
-        services.AddScoped<ICategoryService, CategoryService>();
-        services.AddScoped<IOrderService, OrderService>();
-        services.AddScoped<IPaymentService, PaymentService>();
-        services.AddScoped<IShippingService, ShippingService>();
-        services.AddScoped<IAuthService, AuthService>();
-        services.AddScoped<ITokenService, JwtTokenService>();
-
-        return services;
+            return services;
+        }
     }
 }

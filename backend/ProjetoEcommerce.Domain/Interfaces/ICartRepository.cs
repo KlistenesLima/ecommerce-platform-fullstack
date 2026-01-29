@@ -1,14 +1,12 @@
 ﻿using ProjetoEcommerce.Domain.Entities;
+using System;
+using System.Threading.Tasks;
 
 namespace ProjetoEcommerce.Domain.Interfaces
 {
-    public interface ICartRepository
+    public interface ICartRepository : IRepository<Cart>
     {
-        Task<CartEntity?> GetByIdAsync(Guid id);
-        Task<CartEntity?> GetByUserAsync(Guid userId);
-        Task<CartEntity> AddAsync(CartEntity cart);
-        Task<CartEntity> AddItemAsync(CartEntity cart);
-        Task<CartEntity> UpdateAsync(CartEntity cart);
-        Task<bool> DeleteAsync(Guid id);
+        Task<Cart?> GetByUserAsync(Guid userId);
+        Task AddOrUpdateAsync(Cart cart);
     }
 }

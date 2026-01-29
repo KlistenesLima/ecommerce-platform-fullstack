@@ -1,7 +1,8 @@
-﻿using ProjetoEcommerce.Domain.Entities;
-using ProjetoEcommerce.Domain.Interfaces;
+using AutoMapper;
 using ProjetoEcommerce.Application.Cart.DTOs.Requests;
 using ProjetoEcommerce.Application.Cart.DTOs.Responses;
+using ProjetoEcommerce.Domain.Entities;
+using ProjetoEcommerce.Domain.Interfaces;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -12,108 +13,95 @@ namespace ProjetoEcommerce.Application.Cart.Services
     {
         private readonly ICartRepository _cartRepository;
         private readonly IProductRepository _productRepository;
+        private readonly IMapper _mapper;
 
-        public CartService(ICartRepository cartRepository, IProductRepository productRepository)
+        public CartService(ICartRepository cartRepository, IProductRepository productRepository, IMapper mapper)
         {
             _cartRepository = cartRepository;
             _productRepository = productRepository;
+            _mapper = mapper;
         }
 
-        public async Task<CartResponse> GetByUserAsync(Guid userId)
+        public async Task<CartResponse> GetCartAsync(Guid userId)
         {
             var cart = await _cartRepository.GetByUserAsync(userId);
+
             if (cart == null)
             {
-                cart = new CartEntity(userId);
-                await _cartRepository.AddItemAsync(cart);
+                cart = new ProjetoEcommerce.Domain.Entities.Cart(userId);
+                await _cartRepository.AddOrUpdateAsync(cart);
             }
 
-            return MapToResponse(cart);
+            return _mapper.Map<CartResponse>(cart);
         }
 
-        public async Task<CartResponse> AddItemAsync(AddToCartRequest request)
+        public async Task<CartResponse> AddToCartAsync(Guid userId, AddToCartRequest request)
         {
-            var cart = await _cartRepository.GetByIdAsync(request.CartId)
-                       ?? throw new Exception("Carrinho não encontrado");
+            var cart = await _cartRepository.GetByUserAsync(userId);
 
-            var product = await _productRepository.GetByIdAsync(request.ProductId)
-                          ?? throw new Exception("Produto não encontrado");
+            if (cart == null)
+            {
+                cart = new ProjetoEcommerce.Domain.Entities.Cart(userId);
+            }
 
-            if (product.Stock < request.Quantity)
-                throw new Exception("Quantidade insuficiente em estoque");
+            var product = await _productRepository.GetByIdAsync(request.ProductId);
+            if (product == null)
+                throw new Exception("Produto n�o encontrado.");
 
             var existingItem = cart.Items.FirstOrDefault(i => i.ProductId == request.ProductId);
+
             if (existingItem != null)
             {
-                existingItem.Quantity += request.Quantity;
+                existingItem.UpdateQuantity(existingItem.Quantity + request.Quantity);
             }
             else
             {
-                cart.Items.Add(new CartItem
-                {
-                    Id = Guid.NewGuid(),
-                    CartId = cart.Id,
-                    ProductId = product.Id,
-                    Quantity = request.Quantity,
-                    UnitPrice = product.Price
-                });
+                cart.AddItem(product, request.Quantity);
             }
 
-            await _cartRepository.UpdateAsync(cart);
-            return MapToResponse(cart);
+            await _cartRepository.AddOrUpdateAsync(cart);
+
+            return _mapper.Map<CartResponse>(cart);
         }
 
-        public async Task<CartResponse> RemoveItemAsync(Guid cartId, Guid productId)
+        public async Task RemoveFromCartAsync(Guid userId, Guid productId)
         {
-            var cart = await _cartRepository.GetByIdAsync(cartId)
-                       ?? throw new Exception("Carrinho não encontrado");
+            var cart = await _cartRepository.GetByUserAsync(userId);
 
-            var item = cart.Items.FirstOrDefault(i => i.ProductId == productId)
-                       ?? throw new Exception("Item não encontrado no carrinho");
+            if (cart == null)
+                return;
 
-            cart.Items.Remove(item);
-            await _cartRepository.UpdateAsync(cart);
-
-            return MapToResponse(cart);
+            cart.RemoveItem(productId);
+            await _cartRepository.AddOrUpdateAsync(cart);
         }
 
-        public async Task<CartResponse> ClearAsync(Guid cartId)
+        public async Task ClearCartAsync(Guid userId)
         {
-            var cart = await _cartRepository.GetByIdAsync(cartId)
-                       ?? throw new Exception("Carrinho não encontrado");
+            var cart = await _cartRepository.GetByUserAsync(userId);
 
-            cart.Items.Clear();
-            await _cartRepository.UpdateAsync(cart);
+            if (cart == null)
+                return;
 
-            return MapToResponse(cart);
+            cart.Clear();
+            await _cartRepository.AddOrUpdateAsync(cart);
         }
 
-        public async Task<CartResponse> UpdateItemQuantityAsync(Guid cartId, Guid productId, int quantity)
+        public async Task<CartResponse> UpdateQuantityAsync(Guid userId, UpdateQuantityRequest request)
         {
-            if (quantity <= 0)
-                return await RemoveItemAsync(cartId, productId);
+            var cart = await _cartRepository.GetByUserAsync(userId);
 
-            var cart = await _cartRepository.GetByIdAsync(cartId)
-                       ?? throw new Exception("Carrinho não encontrado");
+            if (cart == null)
+                throw new Exception("Carrinho n�o encontrado.");
 
-            var item = cart.Items.FirstOrDefault(i => i.ProductId == productId)
-                       ?? throw new Exception("Item não encontrado no carrinho");
+            var item = cart.Items.FirstOrDefault(i => i.ProductId == request.ProductId);
 
-            item.Quantity = quantity;
-            await _cartRepository.UpdateAsync(cart);
+            if (item == null)
+                throw new Exception("Item n�o est� no carrinho.");
 
-            return MapToResponse(cart);
-        }
+            item.UpdateQuantity(request.Quantity);
+            await _cartRepository.AddOrUpdateAsync(cart);
 
-        private CartResponse MapToResponse(CartEntity cart)
-        {
-            return new CartResponse
-            {
-                Id = cart.Id,
-                UserId = cart.UserId,
-                TotalPrice = cart.TotalPrice,
-                CreatedAt = cart.CreatedAt
-            };
+            return _mapper.Map<CartResponse>(cart);
         }
     }
 }

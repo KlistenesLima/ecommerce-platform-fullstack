@@ -33,7 +33,11 @@ namespace ProjetoEcommerce.Infra.MessageQueue.RabbitMQ
             using var connection = factory.CreateConnection();
             using var channel = connection.CreateModel();
 
-            channel.ExchangeDeclare(exchange, ExchangeType.Direct, durable: true);
+            // Se exchange for vazio, usa Default Exchange (envio direto p/ fila)
+            if (!string.IsNullOrEmpty(exchange))
+            {
+                channel.ExchangeDeclare(exchange, ExchangeType.Direct, durable: true);
+            }
 
             var json = JsonSerializer.Serialize(message);
             var body = Encoding.UTF8.GetBytes(json);
@@ -42,7 +46,7 @@ namespace ProjetoEcommerce.Infra.MessageQueue.RabbitMQ
             properties.Persistent = true;
 
             channel.BasicPublish(
-                exchange: exchange,
+                exchange: exchange ?? "",
                 routingKey: routingKey,
                 basicProperties: properties,
                 body: body);

@@ -1,14 +1,18 @@
 ﻿using AutoMapper;
 using ProjetoEcommerce.Domain.Entities;
-using ProjetoEcommerce.Application.Users.DTOs.Requests;
-using ProjetoEcommerce.Application.Users.DTOs.Responses;
 using ProjetoEcommerce.Application.Products.DTOs.Requests;
 using ProjetoEcommerce.Application.Products.DTOs.Responses;
-using ProjetoEcommerce.Application.Orders.DTOs.Requests;
-using ProjetoEcommerce.Application.Orders.DTOs.Responses;
-using ProjetoEcommerce.Application.Cart.DTOs.Requests;
+using ProjetoEcommerce.Application.Categories.DTOs;
+using ProjetoEcommerce.Application.Auth.DTOs.Requests;
+using ProjetoEcommerce.Application.Auth.DTOs.Responses;
 using ProjetoEcommerce.Application.Cart.DTOs.Responses;
-using System;
+using ProjetoEcommerce.Application.Orders.DTOs.Responses;
+using ProjetoEcommerce.Application.Users.DTOs.Responses;
+using ProjetoEcommerce.Application.Shippings.DTOs.Responses;
+using ProjetoEcommerce.Application.Payments.DTOs.Responses;
+
+// ALIAS OBRIGATÓRIO: Diferencia a classe 'Cart' do namespace 'Cart'
+using DomainCart = ProjetoEcommerce.Domain.Entities.Cart;
 
 namespace ProjetoEcommerce.Application.Mappings
 {
@@ -16,31 +20,37 @@ namespace ProjetoEcommerce.Application.Mappings
     {
         public MappingProfile()
         {
-            // User Mappings
-            CreateMap<CreateUserRequest, User>()
-                .ForMember(dest => dest.Id, opt => opt.MapFrom(_ => Guid.NewGuid()))
-                .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(_ => DateTime.UtcNow))
-                .ForMember(dest => dest.IsActive, opt => opt.MapFrom(_ => true));
+            // Products
+            CreateMap<CreateProductRequest, Product>();
+            CreateMap<UpdateProductRequest, Product>();
+            CreateMap<Product, ProductResponse>()
+                .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category.Name));
+
+            // Categories
+            CreateMap<Category, CategoryDTO>().ReverseMap();
+            CreateMap<CreateCategoryRequest, Category>();
+
+            // Users
+            CreateMap<CreateUserRequest, User>();
+            CreateMap<User, AuthResponse>();
             CreateMap<User, UserResponse>();
 
-            // Product Mappings
-            CreateMap<CreateProductRequest, Product>()
-                .ForMember(dest => dest.Id, opt => opt.MapFrom(_ => Guid.NewGuid()))
-                .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(_ => DateTime.UtcNow))
-                .ForMember(dest => dest.IsActive, opt => opt.MapFrom(_ => true));
-            CreateMap<Product, ProductResponse>();
+            // Cart (Usa o Alias DomainCart)
+            CreateMap<DomainCart, CartResponse>();
+            
+            // CartItem
+            CreateMap<CartItem, CartItemResponse>()
+                .ForMember(dest => dest.Total, opt => opt.MapFrom(src => src.UnitPrice * src.Quantity));
 
-            // Order Mappings
-            CreateMap<CreateOrderRequest, Order>()
-                .ForMember(dest => dest.Id, opt => opt.MapFrom(_ => Guid.NewGuid()))
-                .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(_ => DateTime.UtcNow));
-            CreateMap<Order, OrderResponse>()
-                .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()));
+            // Orders
+            CreateMap<Order, OrderResponse>();
+            CreateMap<OrderItem, OrderItemResponse>();
 
-            // Cart Mappings
-            CreateMap<AddToCartRequest, CartItem>()
-                .ForMember(dest => dest.Id, opt => opt.MapFrom(_ => Guid.NewGuid()));
-            CreateMap<CartEntity, CartResponse>();
+            // Shippings
+            CreateMap<ShippingEntity, ShippingResponse>();
+
+            // Payments
+            CreateMap<Payment, PaymentResponse>();
         }
     }
 }

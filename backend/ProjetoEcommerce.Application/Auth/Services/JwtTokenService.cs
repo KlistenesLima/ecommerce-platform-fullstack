@@ -8,12 +8,7 @@ using System.Text;
 
 namespace ProjetoEcommerce.Application.Auth.Services
 {
-    public interface ITokenService
-    {
-        string GenerateToken(User user);
-    }
-
-    public class JwtTokenService : ITokenService
+    public class JwtTokenService : IJwtTokenService
     {
         private readonly IConfiguration _configuration;
 
@@ -24,34 +19,26 @@ namespace ProjetoEcommerce.Application.Auth.Services
 
         public string GenerateToken(User user)
         {
-            // Lê "SecretKey" do appsettings.json
-            var secretKey = _configuration["Jwt:SecretKey"];
-            var issuer = _configuration["Jwt:Issuer"];
-            var audience = _configuration["Jwt:Audience"];
-            var expirationMinutes = int.Parse(_configuration["Jwt:ExpirationMinutes"] ?? "60");
-
-            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
-            var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
-
-            var claims = new[]
+            var key = Encoding.ASCII.GetBytes(_configuration["Jwt:SecretKey"] ?? "chave_super_secreta_padrao_123456");
+            var tokenHandler = new JwtSecurityTokenHandler();
+            
+            var tokenDescriptor = new SecurityTokenDescriptor
             {
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Email, user.Email),
-                new Claim(ClaimTypes.Name, $"{user.FirstName} {user.LastName}"),
-                // === IMPORTANTE: ADICIONANDO A ROLE ===
-                new Claim(ClaimTypes.Role, user.Role),
-                new Claim("IsActive", user.IsActive.ToString())
+                Subject = new ClaimsIdentity(new Claim[]
+                {
+                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                    new Claim(ClaimTypes.Email, user.Email),
+                    // CORREÇÃO CRÍTICA: Converter Enum para String explicitamente
+                    new Claim(ClaimTypes.Role, user.Role.ToString()) 
+                }),
+                Expires = DateTime.UtcNow.AddMinutes(60),
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
+                Issuer = _configuration["Jwt:Issuer"],
+                Audience = _configuration["Jwt:Audience"]
             };
-
-            var token = new JwtSecurityToken(
-                issuer: issuer,
-                audience: audience,
-                claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(expirationMinutes),
-                signingCredentials: credentials
-            );
-
-            return new JwtSecurityTokenHandler().WriteToken(token);
+            
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            return tokenHandler.WriteToken(token);
         }
     }
 }

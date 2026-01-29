@@ -3,62 +3,51 @@ using ProjetoEcommerce.Domain.Entities;
 using ProjetoEcommerce.Domain.Interfaces;
 using ProjetoEcommerce.Infra.Data.Context;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace ProjetoEcommerce.Infra.Data.Repositories
 {
-    public class CartRepository : ICartRepository
+    public class CartRepository : Repository<Cart>, ICartRepository
     {
-        private readonly ApplicationDbContext _context;
-
-        public CartRepository(ApplicationDbContext context)
+        public CartRepository(ApplicationDbContext context) : base(context)
         {
-            _context = context;
         }
 
-        public async Task<CartEntity?> GetByIdAsync(Guid id)
+        public async Task<Cart?> GetByUserAsync(Guid userId)
         {
-            return await _context.Carts
-                .Include(c => c.Items)
-                .ThenInclude(i => i.Product)
-                .FirstOrDefaultAsync(c => c.Id == id);
-        }
-
-        public async Task<CartEntity?> GetByUserAsync(Guid userId)
-        {
-            return await _context.Carts
-                .Include(c => c.Items)
-                .ThenInclude(i => i.Product)
+            return await _dbSet
+                .Include(c => c.Items).ThenInclude(c => c.Product)
                 .FirstOrDefaultAsync(c => c.UserId == userId);
         }
 
-        public async Task<CartEntity> AddAsync(CartEntity cart)
+        public async Task AddOrUpdateAsync(Cart cart)
         {
-            await _context.Carts.AddAsync(cart);
+            var existingCart = await _dbSet
+                .FirstOrDefaultAsync(c => c.Id == cart.Id);
+
+            if (existingCart == null)
+            {
+                await _dbSet.AddAsync(cart);
+            }
+
+            // Salva/atualiza os itens diretamente
+            foreach (var item in cart.Items)
+            {
+                var existingItem = await _context.Set<CartItem>()
+                    .FirstOrDefaultAsync(i => i.CartId == cart.Id && i.ProductId == item.ProductId);
+
+                if (existingItem == null)
+                {
+                    await _context.Set<CartItem>().AddAsync(item);
+                }
+                else
+                {
+                    existingItem.UpdateQuantity(item.Quantity);
+                }
+            }
+
             await _context.SaveChangesAsync();
-            return cart;
-        }
-
-        public async Task<CartEntity> AddItemAsync(CartEntity cart)
-        {
-            return await AddAsync(cart);
-        }
-
-        public async Task<CartEntity> UpdateAsync(CartEntity cart)
-        {
-            _context.Carts.Update(cart);
-            await _context.SaveChangesAsync();
-            return cart;
-        }
-
-        public async Task<bool> DeleteAsync(Guid id)
-        {
-            var cart = await _context.Carts.FindAsync(id);
-            if (cart == null) return false;
-
-            _context.Carts.Remove(cart);
-            await _context.SaveChangesAsync();
-            return true;
         }
     }
 }

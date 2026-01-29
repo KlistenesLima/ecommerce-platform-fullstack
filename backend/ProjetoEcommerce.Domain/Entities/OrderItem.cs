@@ -1,15 +1,27 @@
-﻿namespace ProjetoEcommerce.Domain.Entities
+﻿using System;
+
+namespace ProjetoEcommerce.Domain.Entities
 {
-    public class OrderItem
+    public class OrderItem : BaseEntity
     {
-        public Guid Id { get; set; } = Guid.NewGuid();
-        public Guid OrderId { get; set; }
-        public Guid ProductId { get; set; }
-        public int Quantity { get; set; }
-        public decimal UnitPrice { get; set; }
-        public decimal TotalPrice { get; set; }
-        
+        public Guid OrderId { get; private set; }
+        public Guid ProductId { get; private set; }
+        public string ProductName { get; private set; }
+        public decimal UnitPrice { get; private set; }
+        public int Quantity { get; private set; }
+
         public virtual Order Order { get; set; }
         public virtual Product Product { get; set; }
+
+        protected OrderItem() { }
+
+        public OrderItem(Guid orderId, Guid productId, string productName, decimal unitPrice, int quantity)
+        {
+            OrderId = orderId;
+            ProductId = productId;
+            ProductName = productName;
+            UnitPrice = unitPrice;
+            Quantity = quantity;
+        }
     }
 }
