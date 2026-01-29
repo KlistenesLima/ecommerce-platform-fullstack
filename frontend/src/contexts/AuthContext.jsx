@@ -24,7 +24,7 @@ export const AuthProvider = ({ children }) => {
             console.log("Tentando logar com:", email);
             const response = await api.post('/auth/login', { email, password });
 
-            console.log("RESPOSTA DO BACKEND:", response.data); // <--- O SEGREDO ESTÁ AQUI
+            console.log("RESPOSTA DO BACKEND:", response.data);
 
             // Tenta pegar os dados. Se o backend mandar com letra maiúscula ou minúscula, garantimos aqui:
             const token = response.data.token || response.data.Token;
@@ -55,7 +55,19 @@ export const AuthProvider = ({ children }) => {
             return userData;
         } catch (error) {
             console.error("Erro no signIn:", error);
-            throw error; // Joga o erro pro Login.jsx tratar
+            throw error;
+        }
+    };
+
+    // === AQUI ESTÁ A FUNÇÃO QUE FALTAVA ===
+    const register = async (userData) => {
+        try {
+            // userData deve conter: firstName, lastName, email, phoneNumber, password
+            const response = await api.post('/auth/register', userData);
+            return response.data;
+        } catch (error) {
+            console.error("Erro no register:", error);
+            throw error;
         }
     };
 
@@ -72,7 +84,8 @@ export const AuthProvider = ({ children }) => {
             user,
             loading,
             signIn,
-            signOut
+            signOut,
+            register // <--- OBRIGATÓRIO: Adicionado aqui para o Register.jsx conseguir usar
         }}>
             {children}
         </AuthContext.Provider>

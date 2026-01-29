@@ -1,17 +1,15 @@
-using ProjetoEcommerce.Application.Shipping.DTOs.Requests;
-using ProjetoEcommerce.Application.Shipping.DTOs.Responses;
-using ProjetoEcommerce.Application.Shippings.DTOs.Requests;
-using ProjetoEcommerce.Domain.Enums;
+﻿using ProjetoEcommerce.Application.Shippings.DTOs.Requests;
+using ProjetoEcommerce.Application.Shippings.DTOs.Responses;
 using System;
 using System.Threading.Tasks;
 
-namespace ProjetoEcommerce.Application.Shipping.Services
+namespace ProjetoEcommerce.Application.Shippings.Services
 {
     public interface IShippingService
     {
+        Task<decimal> CalculateShippingAsync(string zipCode, decimal weight);
+        Task<ShippingResponse> GetShippingByIdAsync(Guid id);
         Task<ShippingResponse> CreateShippingAsync(CreateShippingRequest request);
-        Task<ShippingResponse> GetShippingAsync(Guid id);
-        Task<ShippingResponse> TrackShippingAsync(string trackingNumber);
-        Task<bool> UpdateShippingStatusAsync(Guid id, ShippingStatus status);
+        Task<ShippingResponse> UpdateStatusAsync(UpdateShippingStatusRequest request);
     }
 }

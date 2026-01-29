@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'react-toastify';
-import { FiMail, FiLock } from 'react-icons/fi';
-import './Auth.css';
+import { FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
+import './Auth.css'; // Importa o CSS unificado
 
 const Login = () => {
     const [formData, setFormData] = useState({ email: '', password: '' });
+    const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const { signIn } = useAuth();
     const navigate = useNavigate();
@@ -16,18 +17,18 @@ const Login = () => {
         setLoading(true);
 
         try {
-            // O signIn deve retornar os dados do usuário (incluindo a role)
             const userData = await signIn(formData);
-
             toast.success(`Bem-vindo, ${userData.name}!`);
 
-            // === AQUI ESTÁ A CORREÇÃO ===
-            // Se for admin, manda para o Dashboard. Se não, manda para a Home.
-            if (userData.role === 'admin') {
+            // --- CORREÇÃO AQUI ---
+            // O Backend manda 1 (inteiro) para Admin e 0 para Customer.
+            // Adicionei verificações extras por segurança.
+            if (userData.role === 1 || userData.role === 'Admin' || userData.role === 'admin') {
                 navigate('/admin');
             } else {
                 navigate('/');
             }
+            // ---------------------
 
         } catch (error) {
             console.error(error);
@@ -40,33 +41,53 @@ const Login = () => {
     return (
         <div className="auth-container">
             <div className="auth-card">
-                <h2>Bem-vindo de volta</h2>
-                <p>Acesse sua conta para continuar</p>
+                <div className="auth-header">
+                    <Link to="/" className="auth-logo">
+                        <span className="logo-text">LUXE</span>
+                        <span className="logo-accent">Store</span>
+                    </Link>
+                    <h2>Bem-vindo de volta</h2>
+                    <p>Acesse sua conta para continuar</p>
+                </div>
 
-                <form onSubmit={handleSubmit}>
-                    <div className="form-group icon-input">
-                        <FiMail />
-                        <input
-                            type="email"
-                            placeholder="Seu email"
-                            value={formData.email}
-                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                            required
-                        />
+                <form onSubmit={handleSubmit} className="auth-form">
+                    <div className="form-group">
+                        <label className="form-label">Email</label>
+                        <div className="icon-input">
+                            <FiMail />
+                            <input
+                                type="email"
+                                placeholder="Seu email"
+                                value={formData.email}
+                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                required
+                            />
+                        </div>
                     </div>
 
-                    <div className="form-group icon-input">
-                        <FiLock />
-                        <input
-                            type="password"
-                            placeholder="Sua senha"
-                            value={formData.password}
-                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                            required
-                        />
+                    <div className="form-group">
+                        <label className="form-label">Senha</label>
+                        <div className="icon-input">
+                            <FiLock />
+                            <input
+                                type={showPassword ? 'text' : 'password'}
+                                placeholder="Sua senha"
+                                value={formData.password}
+                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                required
+                            />
+                            <button
+                                type="button"
+                                className="toggle-password"
+                                onClick={() => setShowPassword(!showPassword)}
+                                tabIndex="-1"
+                            >
+                                {showPassword ? <FiEyeOff /> : <FiEye />}
+                            </button>
+                        </div>
                     </div>
 
-                    <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
+                    <button type="submit" className="btn-block" disabled={loading}>
                         {loading ? 'Entrando...' : 'Entrar'}
                     </button>
                 </form>

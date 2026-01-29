@@ -1,99 +1,259 @@
+/* Container da Página */
 .checkout-page {
-  padding-top: calc(73px + var(--spacing-2xl));
-  padding-bottom: var(--spacing-3xl);
-  min-height: 100vh;
+    min-height: 100vh;
+    padding-top: 120px; /* Espaço para o Header */
+    padding-bottom: 40px;
+    background-color: #0f111a; /* Fundo Escuro Principal */
+    color: #fff;
+    display: flex;
+    justify-content: center;
 }
 
-.checkout-page h1 {
-  margin-bottom: var(--spacing-2xl);
+.checkout-container {
+    width: 100%;
+    max-width: 600px; /* Foco centralizado */
+    padding: 0 20px;
 }
 
-.checkout-content {
-  display: grid;
-  grid-template-columns: 1fr 380px;
-  gap: var(--spacing-2xl);
+/* --- Indicador de Etapas (1 - 2 - 3) --- */
+.steps-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 40px;
+    position: relative;
 }
 
-.checkout-form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xl);
+.step {
+    color: #555;
+    font-weight: 600;
+    font-size: 0.9rem;
+    background: #0f111a;
+    z-index: 2;
+    padding: 0 10px;
+    transition: color 0.3s;
 }
 
-.form-section {
-  padding: var(--spacing-xl);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+    .step.active {
+        color: #d4af37; /* Dourado */
+    }
+
+/* Linha conectora entre os passos */
+.line {
+    height: 1px;
+    background: #333;
+    flex: 1;
+    margin: 0 10px;
 }
 
-.form-section h3 {
-  margin-bottom: var(--spacing-lg);
-  padding-bottom: var(--spacing-md);
-  border-bottom: 1px solid var(--border);
+/* --- Cartão Principal --- */
+.checkout-card {
+    background: #1a1d29; /* Fundo do Card */
+    padding: 30px;
+    border-radius: 12px;
+    border: 1px solid #2e3445;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
 }
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    border-bottom: 1px solid #2e3445;
+    padding-bottom: 15px;
+}
+
+    .card-header h2 {
+        font-size: 1.25rem;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 0;
+    }
+
+        .card-header h2 svg {
+            color: #d4af37;
+        }
+
+.total-badge {
+    background: rgba(212, 175, 55, 0.15);
+    color: #d4af37;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+/* --- Formulário --- */
+.form-group {
+    margin-bottom: 20px;
+}
+
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        color: #a0aec0;
+        font-size: 0.9rem;
+    }
+
+.form-control {
+    width: 100%;
+    padding: 12px 15px;
+    background: #0f111a;
+    border: 1px solid #333;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+}
+
+    .form-control:focus {
+        outline: none;
+        border-color: #d4af37;
+        box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.1);
+    }
 
 .form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-md);
+    display: flex;
+    gap: 15px;
 }
 
-.form-group {
-  margin-bottom: var(--spacing-md);
+/* Aviso de teste */
+.payment-warning {
+    background: #2a2a2a;
+    color: #aaa;
+    font-size: 0.85rem;
+    padding: 12px;
+    border-radius: 6px;
+    margin-bottom: 25px;
+    text-align: center;
+    border: 1px dashed #444;
 }
 
-.form-group label {
-  display: block;
-  margin-bottom: var(--spacing-sm);
-  font-size: 0.9rem;
-  color: var(--text-secondary);
+/* --- Botões do Rodapé --- */
+.checkout-footer {
+    display: flex;
+    gap: 15px;
+    margin-top: 10px;
 }
 
-.order-summary {
-  position: sticky;
-  top: calc(73px + var(--spacing-xl));
-  padding: var(--spacing-xl);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  height: fit-content;
+.btn-primary {
+    flex: 2;
+    background: #d4af37;
+    color: #0f111a;
+    border: none;
+    padding: 14px;
+    border-radius: 6px;
+    font-weight: bold;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: filter 0.2s;
 }
 
-.order-summary h3 {
-  margin-bottom: var(--spacing-lg);
+    .btn-primary:hover {
+        filter: brightness(1.1);
+    }
+
+    .btn-primary:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+
+.btn-secondary {
+    flex: 1;
+    background: transparent;
+    color: #fff;
+    border: 1px solid #333;
+    padding: 14px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
 }
 
-.summary-item {
-  display: flex;
-  justify-content: space-between;
-  padding: var(--spacing-sm) 0;
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  border-bottom: 1px solid var(--border);
+    .btn-secondary:hover {
+        background: #252836;
+        border-color: #555;
+    }
+
+/* --- Tela de Sucesso --- */
+.checkout-success {
+    text-align: center;
+    padding: 40px 20px;
+    background: #1a1d29;
+    border-radius: 12px;
+    border: 1px solid #2e3445;
 }
 
-.summary-total {
-  display: flex;
-  justify-content: space-between;
-  padding-top: var(--spacing-lg);
-  font-family: var(--font-display);
-  font-size: 1.25rem;
-  font-weight: 700;
+.success-icon {
+    font-size: 80px;
+    color: #4caf50; /* Verde Sucesso */
+    margin-bottom: 20px;
 }
 
-.summary-total span:last-child {
-  color: var(--primary);
+.checkout-success h1 {
+    font-size: 1.8rem;
+    margin-bottom: 10px;
+    color: #fff;
 }
 
-@media (max-width: 992px) {
-  .checkout-content {
-    grid-template-columns: 1fr;
-  }
+.address-confirm {
+    background: #0f111a;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 20px 0;
+    color: #a0aec0;
+    line-height: 1.6;
+    font-size: 0.95rem;
 }
 
-@media (max-width: 576px) {
-  .form-row {
-    grid-template-columns: 1fr;
-  }
+/* --- Tela Vazia --- */
+.empty-checkout {
+    text-align: center;
+    padding-top: 50px;
+}
+
+.btn-back {
+    margin-top: 20px;
+    padding: 10px 20px;
+    background: transparent;
+    border: 1px solid #d4af37;
+    color: #d4af37;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* --- Animações --- */
+.animate-fade {
+    animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsividade Mobile */
+@media (max-width: 500px) {
+    .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .checkout-footer {
+        flex-direction: column-reverse; /* Botão voltar vai pra baixo */
+    }
+
+    .btn-primary, .btn-secondary {
+        width: 100%;
+    }
 }

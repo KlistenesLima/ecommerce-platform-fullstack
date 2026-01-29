@@ -1,26 +1,37 @@
-﻿namespace ProjetoEcommerce.Domain.Entities
+﻿using System;
+
+namespace ProjetoEcommerce.Domain.Entities
 {
-    public class CartItem
+    public class CartItem : BaseEntity
     {
-        public Guid Id { get; set; } = Guid.NewGuid();
-        public Guid CartId { get; set; }
-        public Guid ProductId { get; set; }
-        public int Quantity { get; set; }
-        public decimal UnitPrice { get; set; }
+        public Guid CartId { get; private set; }
+        public Guid ProductId { get; private set; }
+        public string ProductName { get; private set; }
+        public int Quantity { get; private set; }
+        public decimal UnitPrice { get; private set; }
 
-        public virtual CartEntity Cart { get; set; } = null!;
-        public virtual Product Product { get; set; } = null!;
+        // Propriedades de Navegação
+        public virtual Cart Cart { get; set; }
+        public virtual Product Product { get; set; }
 
-        public CartItem() { }
+        // Propriedade Calculada (Resolve o erro "TotalPrice")
+        public decimal TotalPrice => UnitPrice * Quantity;
 
-        public CartItem(Guid cartId, Guid productId, int quantity, decimal unitPrice)
+        protected CartItem() { }
+
+        // Construtor que aceita o Objeto Product (Resolve o erro do construtor)
+        public CartItem(Guid cartId, Product product, int quantity)
         {
             CartId = cartId;
-            ProductId = productId;
+            ProductId = product.Id;
+            ProductName = product.Name;
+            UnitPrice = product.Price;
             Quantity = quantity;
-            UnitPrice = unitPrice;
         }
 
-        public decimal Total => Quantity * UnitPrice;
+        public void UpdateQuantity(int quantity)
+        {
+            Quantity = quantity;
+        }
     }
 }

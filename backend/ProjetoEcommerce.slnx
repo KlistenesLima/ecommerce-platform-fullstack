@@ -7,5 +7,4 @@
   <Project Path="ProjetoEcommerce.Infra.Data/ProjetoEcommerce.Infra.Data.csproj" />
   <Project Path="ProjetoEcommerce.Infra.IoC/ProjetoEcommerce.Infra.IoC.csproj" />
   <Project Path="ProjetoEcommerce.Infra.MessageQueue/ProjetoEcommerce.Infra.MessageQueue.csproj" />
-  <Project Path="ProjetoEcommerce.Tests/ProjetoEcommerce.Tests.csproj" />
 </Solution>

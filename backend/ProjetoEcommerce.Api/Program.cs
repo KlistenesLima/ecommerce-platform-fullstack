@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+Ôªøusing Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -6,26 +6,31 @@ using Microsoft.IdentityModel.Tokens;
 using ProjetoEcommerce.Api.Extensions;
 using ProjetoEcommerce.Application;
 using ProjetoEcommerce.Infra.IoC;
+using ProjetoEcommerce.Infra.MessageQueue.RabbitMQ; // Importante
+using ProjetoEcommerce.Api.Workers; // Importante
 using System.Net;
 using System.Net.Security;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
 
-// === DESABILITAR VALIDA«√O SSL (APENAS DESENVOLVIMENTO) ===
-ServicePointManager.ServerCertificateValidationCallback =
-    (sender, certificate, chain, sslPolicyErrors) => true;
-// ===========================================================
+ServicePointManager.ServerCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true;
 
-// Infrastructure Layer
+// Infrastructure Layer (Aqui dentro deve estar injetando os reposit√≥rios)
 builder.Services.AddInfrastructure(configuration);
 
 // Application Layer
 builder.Services.AddApplication(configuration);
 
-// === CONFIGURA«√O DE JWT ===
+// === MENSAGERIA (RABBITMQ) ===
+// Registrando as classes existentes da sua Infra
+builder.Services.AddSingleton<IRabbitMQPublisher, RabbitMQPublisher>();
+builder.Services.AddSingleton<IRabbitMQConsumer, RabbitMQConsumer>();
+
+// Registrando o Worker que roda em segundo plano
+builder.Services.AddHostedService<SmsNotificationWorker>();
+
 var secretKey = configuration["Jwt:SecretKey"];
 var key = Encoding.ASCII.GetBytes(secretKey);
 
@@ -57,9 +62,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("Development", policy =>
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
+        policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
     });
 });
 

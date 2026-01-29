@@ -1,30 +1,27 @@
-import api from './api';
+﻿import api from './api';
 
 export const cartService = {
-  async getCart() {
-    const response = await api.get('/cart');
-    return response.data;
-  },
+    getCart: async () => {
+        const response = await api.get('/cart');
+        return response.data;
+    },
 
-  async addItem(productId, quantity = 1) {
-    const response = await api.post('/cart/items', { productId, quantity });
-    return response.data;
-  },
+    addItem: async (productId, quantity) => {
+        const response = await api.post('/cart', { productId, quantity });
+        return response.data;
+    },
 
-  async updateQuantity(productId, quantity) {
-    const response = await api.put(`/cart/items/${productId}`, { quantity });
-    return response.data;
-  },
+    updateQuantity: async (productId, quantity) => {
+        const response = await api.put('/cart/item', { productId, quantity });
+        return response.data;
+    },
 
-  async removeItem(productId) {
-    const response = await api.delete(`/cart/items/${productId}`);
-    return response.data;
-  },
+    removeItem: async (productId) => {
+        const response = await api.delete(`/cart/${productId}`); 
+        return response.data;
+    },
 
-  async clear() {
-    const response = await api.delete('/cart');
-    return response.data;
-  }
+    clear: async () => {
+        await api.delete('/cart');
+    }
 };
-
-export default cartService;

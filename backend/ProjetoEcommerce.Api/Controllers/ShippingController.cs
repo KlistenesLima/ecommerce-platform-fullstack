@@ -1,6 +1,6 @@
-using Microsoft.AspNetCore.Mvc;
-using ProjetoEcommerce.Application.Shipping.DTOs.Requests;
-using ProjetoEcommerce.Application.Shipping.Services;
+﻿using Microsoft.AspNetCore.Mvc;
+// Namespace CORRETO (Plural)
+using ProjetoEcommerce.Application.Shippings.Services;
 using ProjetoEcommerce.Application.Shippings.DTOs.Requests;
 using System;
 using System.Threading.Tasks;
@@ -12,34 +12,46 @@ namespace ProjetoEcommerce.Api.Controllers
     public class ShippingController : ControllerBase
     {
         private readonly IShippingService _shippingService;
-        public ShippingController(IShippingService shippingService) => _shippingService = shippingService;
 
-        [HttpPost]
-        public async Task<IActionResult> CreateShipping([FromBody] CreateShippingRequest request)
+        public ShippingController(IShippingService shippingService)
         {
-            try
-            {
-                var shipping = await _shippingService.CreateShippingAsync(request);
-                return CreatedAtAction(nameof(GetShipping), new { id = shipping.Id }, shipping);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            _shippingService = shippingService;
+        }
+
+        [HttpPost("calculate")]
+        public async Task<IActionResult> CalculateShipping([FromBody] CalculateShippingRequest request)
+        {
+            var result = await _shippingService.CalculateShippingAsync(request.ZipCode, request.Weight);
+            return Ok(new { Cost = result });
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetShipping(Guid id)
         {
-            var shipping = await _shippingService.GetShippingAsync(id);
-            return shipping == null ? NotFound() : Ok(shipping);
+            var result = await _shippingService.GetShippingByIdAsync(id);
+            if (result == null) return NotFound();
+            return Ok(result);
         }
 
-        [HttpGet("track/{trackingNumber}")]
-        public async Task<IActionResult> TrackShipping(string trackingNumber)
+        [HttpPost]
+        public async Task<IActionResult> CreateShipping([FromBody] CreateShippingRequest request)
         {
-            var shipping = await _shippingService.TrackShippingAsync(trackingNumber);
-            return shipping == null ? NotFound() : Ok(shipping);
+            var result = await _shippingService.CreateShippingAsync(request);
+            return CreatedAtAction(nameof(GetShipping), new { id = result.Id }, result);
         }
+
+        [HttpPut("status")]
+        public async Task<IActionResult> UpdateStatus([FromBody] UpdateShippingStatusRequest request)
+        {
+            var result = await _shippingService.UpdateStatusAsync(request);
+            return Ok(result);
+        }
+    }
+
+    // DTO auxiliar local se não existir na Application (ou mover para lá se preferir)
+    public class CalculateShippingRequest 
+    {
+        public string ZipCode { get; set; }
+        public decimal Weight { get; set; }
     }
 }

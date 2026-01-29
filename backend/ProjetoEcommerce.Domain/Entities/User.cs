@@ -1,39 +1,40 @@
-﻿namespace ProjetoEcommerce.Domain.Entities
+﻿using ProjetoEcommerce.Domain.Enums;
+using System;
+using System.Collections.Generic; // Necessário para ICollection
+
+namespace ProjetoEcommerce.Domain.Entities
 {
-    public class User
+    public class User : BaseEntity
     {
-        public Guid Id { get; set; } = Guid.NewGuid();
-        public string Email { get; set; } = string.Empty;
-        public string PasswordHash { get; set; } = string.Empty;
-        public string FirstName { get; set; } = string.Empty;
-        public string LastName { get; set; } = string.Empty;
-        public string PhoneNumber { get; set; } = string.Empty;
-        public string Role { get; set; } = "client";
-        public bool IsActive { get; set; } = true;
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        public DateTime? UpdatedAt { get; set; }
+        public string FirstName { get; private set; }
+        public string LastName { get; private set; }
+        public string Email { get; private set; }
+        public string PasswordHash { get; set; }
+        public string PhoneNumber { get; private set; }
+        
+        public UserRole Role { get; set; } 
 
+        // --- PROPRIEDADES DE NAVEGAÇÃO ---
+        public virtual Cart Cart { get; set; }
+        
+        // CORREÇÃO 1: Adicionada a lista de Orders que o DbContext pedia
         public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
-        public virtual CartEntity? Cart { get; set; }
 
-        public User() { }
+        // Construtor vazio para o EF Core
+        protected User() { }
 
-        public User(string email, string passwordHash, string firstName)
+        // CORREÇÃO 2: Construtor que o UserService espera (5 argumentos)
+        public User(string firstName, string lastName, string email, string passwordHash, string phoneNumber)
         {
-            Email = email;
-            PasswordHash = passwordHash;
-            FirstName = firstName;
-        }
-
-        public User(string email, string passwordHash, string firstName, string lastName, string phoneNumber)
-        {
-            Email = email;
-            PasswordHash = passwordHash;
             FirstName = firstName;
             LastName = lastName;
+            Email = email;
+            PasswordHash = passwordHash;
             PhoneNumber = phoneNumber;
+            Role = UserRole.Customer; // Default
         }
 
+        // CORREÇÃO 3: Método UpdateProfile que o UserService chama
         public void UpdateProfile(string firstName, string lastName, string phoneNumber)
         {
             FirstName = firstName;
@@ -41,11 +42,10 @@
             PhoneNumber = phoneNumber;
             UpdatedAt = DateTime.UtcNow;
         }
-
-        public void Deactivate()
+        
+        public void SetAdmin()
         {
-            IsActive = false;
-            UpdatedAt = DateTime.UtcNow;
+            Role = UserRole.Admin;
         }
     }
 }
