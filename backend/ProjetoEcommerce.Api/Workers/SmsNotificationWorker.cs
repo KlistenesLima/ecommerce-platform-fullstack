@@ -1,10 +1,13 @@
-﻿using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using ProjetoEcommerce.Infra.MessageQueue.RabbitMQ;
+using Microsoft.Extensions.DependencyInjection;
+using ProjetoEcommerce.Domain.Events;
+using ProjetoEcommerce.Domain.Interfaces;
+using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
 using System;
-using System.Net;
-using System.Net.Mail;
+using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -12,103 +15,91 @@ namespace ProjetoEcommerce.Api.Workers
 {
     public class SmsNotificationWorker : BackgroundService
     {
-        private readonly IRabbitMQConsumer _consumer;
         private readonly ILogger<SmsNotificationWorker> _logger;
-        private readonly IConfiguration _configuration;
+        private readonly IServiceProvider _serviceProvider;
+        private IConnection _connection;
+        private IModel _channel;
+        private const string QueueName = "order-created";
 
-        public SmsNotificationWorker(IRabbitMQConsumer consumer, ILogger<SmsNotificationWorker> logger, IConfiguration configuration)
+        public SmsNotificationWorker(ILogger<SmsNotificationWorker> logger, IServiceProvider serviceProvider)
         {
-            _consumer = consumer;
             _logger = logger;
-            _configuration = configuration;
+            _serviceProvider = serviceProvider;
+            InitializeRabbitMQ();
         }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        private void InitializeRabbitMQ()
         {
-            _logger.LogInformation(">>> Worker de Notificações Ativo (Email Real + SMS Mock)");
-
-            await _consumer.ConsumeAsync<NotificationDTO>("sms_notifications_queue", async (message) =>
+            try
             {
-                if (message != null)
-                {
-                    // Envia em paralelo
-                    var t1 = SendMockSms(message);
-                    var t2 = SendRealEmail(message);
-                    
-                    await Task.WhenAll(t1, t2);
-                }
-            }, stoppingToken);
+                var factory = new ConnectionFactory() { HostName = "localhost" };
+                _connection = factory.CreateConnection();
+                _channel = _connection.CreateModel();
+                
+                _channel.QueueDeclare(queue: QueueName, durable: false, exclusive: false, autoDelete: false, arguments: null);
+            }
+            catch (Exception ex) { _logger.LogError($"RabbitMQ Init Error: {ex.Message}"); }
         }
 
-        private Task SendMockSms(NotificationDTO data)
+        protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            var originalColor = Console.ForegroundColor;
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine($"\n[SMS MOCK] Enviado para {data.Phone}: {data.Message}");
-            Console.ForegroundColor = originalColor;
+            if (_channel == null) return Task.CompletedTask;
+
+            var consumer = new EventingBasicConsumer(_channel);
+            consumer.Received += async (model, ea) =>
+            {
+                var body = ea.Body.ToArray();
+                var message = Encoding.UTF8.GetString(body);
+                
+                try 
+                {
+                    var orderEvent = JsonSerializer.Deserialize<OrderCreatedEvent>(message);
+                    if (orderEvent != null)
+                    {
+                        await ProcessNotification(orderEvent);
+                    }
+                }
+                catch (Exception ex) { _logger.LogError($"Erro processando mensagem: {ex.Message}"); }
+            };
+
+            _channel.BasicConsume(queue: QueueName, autoAck: true, consumer: consumer);
             return Task.CompletedTask;
         }
 
-        private async Task SendRealEmail(NotificationDTO data)
+        private async Task ProcessNotification(OrderCreatedEvent order)
         {
-            // Pega config do appsettings ou usa valores padrao que vão falhar se nao configurar
-            var smtpHost = _configuration["Email:Host"] ?? "smtp.gmail.com";
-            var smtpPort = int.Parse(_configuration["Email:Port"] ?? "587");
-            var smtpUser = _configuration["Email:User"]; // SEU GMAIL
-            var smtpPass = _configuration["Email:Password"]; // SUA SENHA DE APP DO GMAIL
-
-            if (string.IsNullOrEmpty(smtpUser) || string.IsNullOrEmpty(smtpPass))
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("[EMAIL ERROR] Credenciais de E-mail não configuradas no appsettings.json!");
-                Console.ResetColor();
-                // Lança exceção para testar a DLQ (Dead Letter Queue)
-                throw new Exception("Credenciais de email inválidas. Mensagem enviada para DLQ."); 
-            }
+            // LOG NOVO PARA IDENTIFICAR QUE É O CÓDIGO NOVO
+            _logger.LogWarning($"[WORKER SMTP] Tentando enviar email REAL para {order.Email}...");
 
             try 
             {
-                using var client = new SmtpClient(smtpHost, smtpPort)
+                using (var scope = _serviceProvider.CreateScope())
                 {
-                    Credentials = new NetworkCredential(smtpUser, smtpPass),
-                    EnableSsl = true
-                };
+                    var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
+                    
+                    var subject = $"Pedido Confirmado! #{order.OrderId.ToString().Substring(0, 8)}";
+                    
+                    var body = $@"
+                        <div style='font-family: Arial, sans-serif; padding: 20px; border: 1px solid #ddd; background-color: #f9f9f9;'>
+                            <h2 style='color: #27ae60;'>Pagamento Aprovado!</h2>
+                            <p>Olá, <strong>{order.CustomerName}</strong>.</p>
+                            <p>Seu pedido foi processado com sucesso.</p>
+                            <hr>
+                            <h3>Detalhes:</h3>
+                            <p><b>Total:</b> R$ {order.TotalAmount:F2}</p>
+                            <p><b>Data:</b> {order.CreatedAt}</p>
+                            <br>
+                            <p>Obrigado por comprar conosco!</p>
+                        </div>";
 
-                var mailMessage = new MailMessage
-                {
-                    From = new MailAddress(smtpUser, "LuxeStore"),
-                    Subject = $"Pedido Confirmado: {data.OrderId}",
-                    Body = $"<h1>Olá, {data.CustomerName}!</h1><p>{data.Message}</p><p>Obrigado por comprar conosco.</p>",
-                    IsBodyHtml = true,
-                };
-                
-                // Se o email do usuario for invalido/mock, enviamos para o próprio remetente para teste
-                var targetEmail = data.Email.Contains("@") ? data.Email : smtpUser;
-                mailMessage.To.Add(targetEmail);
-
-                Console.WriteLine($"[EMAIL REAL] Conectando ao SMTP {smtpHost}...");
-                await client.SendMailAsync(mailMessage);
-
-                Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine($"[EMAIL REAL] Sucesso! Enviado para {targetEmail}");
-                Console.ResetColor();
+                    await emailService.SendEmailAsync(order.Email, subject, body);
+                    _logger.LogInformation($"[WORKER SMTP] Email enviado com sucesso!");
+                }
             }
             catch (Exception ex)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"[EMAIL FALHOU] {ex.Message}");
-                Console.ResetColor();
-                throw; // Joga o erro pra cima pro RabbitMQ mandar pra DLQ
+                _logger.LogError($"[WORKER ERRO] Falha ao enviar email: {ex.Message}");
             }
         }
-    }
-
-    public class NotificationDTO
-    {
-        public Guid OrderId { get; set; }
-        public string CustomerName { get; set; }
-        public string Phone { get; set; }
-        public string Email { get; set; }
-        public string Message { get; set; }
     }
 }

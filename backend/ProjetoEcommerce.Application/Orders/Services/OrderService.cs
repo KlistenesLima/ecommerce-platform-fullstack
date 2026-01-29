@@ -2,6 +2,7 @@
 using ProjetoEcommerce.Application.Orders.DTOs.Requests;
 using ProjetoEcommerce.Application.Orders.DTOs.Responses;
 using ProjetoEcommerce.Domain.Entities;
+using ProjetoEcommerce.Domain.Events; // <--- NÃO ESQUEÇA DESTE USING
 using ProjetoEcommerce.Domain.Enums;
 using ProjetoEcommerce.Domain.Interfaces;
 using System;
@@ -11,13 +12,14 @@ using System.Threading.Tasks;
 
 namespace ProjetoEcommerce.Application.Orders.Services
 {
-    // A interface agora está no mesmo namespace, nem precisa de using extra
     public class OrderService : IOrderService
     {
         private readonly IOrderRepository _orderRepository;
         private readonly ICartRepository _cartRepository;
         private readonly IShippingRepository _shippingRepository;
         private readonly IUserRepository _userRepository;
+        // 1. ADIÇÃO: Dependência do RabbitMQ
+        private readonly IMessageBusService _messageBus;
         private readonly IMapper _mapper;
 
         public OrderService(
@@ -25,19 +27,21 @@ namespace ProjetoEcommerce.Application.Orders.Services
             ICartRepository cartRepository,
             IShippingRepository shippingRepository,
             IUserRepository userRepository,
+            IMessageBusService messageBus, // <--- 2. INJEÇÃO NO CONSTRUTOR
             IMapper mapper)
         {
             _orderRepository = orderRepository;
             _cartRepository = cartRepository;
             _shippingRepository = shippingRepository;
             _userRepository = userRepository;
+            _messageBus = messageBus; // <--- ATRIBUIÇÃO
             _mapper = mapper;
         }
 
         public async Task<OrderResponse> CreateOrderAsync(Guid userId, CreateOrderRequest request)
         {
             var cart = await _cartRepository.GetByUserAsync(userId);
-            
+
             if (cart == null || !cart.Items.Any())
                 throw new Exception("Carrinho vazio ou não encontrado.");
 
@@ -56,14 +60,39 @@ namespace ProjetoEcommerce.Application.Orders.Services
                 order.AddItem(item.ProductId, item.ProductName, item.UnitPrice, item.Quantity);
             }
 
+            // Salva no Banco
             await _orderRepository.AddAsync(order);
 
+            // Limpa o Carrinho
             cart.Clear();
             await _cartRepository.UpdateAsync(cart);
 
+            // ============================================================
+            // 3. AQUI ESTÁ O TRECHO QUE FALTAVA (O ENVIO PARA A FILA)
+            // ============================================================
+            try
+            {
+                var orderEvent = new OrderCreatedEvent(
+                    order.Id,
+                    user.Id,
+                    user.Email,
+                    $"{user.FirstName} {user.LastName}",
+                    user.PhoneNumber,
+                    order.TotalAmount
+                );
+
+                // Envia para o RabbitMQ
+                _messageBus.Publish(orderEvent, "order-created");
+            }
+            catch (Exception ex)
+            {
+                // Loga erro mas não para o fluxo
+                Console.WriteLine($"[ERRO RABBITMQ] Falha ao publicar: {ex.Message}");
+            }
             return _mapper.Map<OrderResponse>(order);
         }
 
+        // ... Resto dos métodos continua igual ...
         public async Task<OrderResponse> GetOrderByIdAsync(Guid id)
         {
             var order = await _orderRepository.GetByIdAsync(id);

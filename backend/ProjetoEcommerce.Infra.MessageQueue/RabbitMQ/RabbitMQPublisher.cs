@@ -1,57 +1,48 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using ProjetoEcommerce.Domain.Interfaces;
 using RabbitMQ.Client;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace ProjetoEcommerce.Infra.MessageQueue.RabbitMQ
 {
-    public interface IRabbitMQPublisher
-    {
-        Task PublishAsync<T>(string exchange, string routingKey, T message);
-    }
-
+    // Agora implementa a interface específica
     public class RabbitMQPublisher : IRabbitMQPublisher
     {
-        private readonly IConfiguration _configuration;
+        private readonly IConnection _connection;
+        private readonly IModel _channel;
 
-        public RabbitMQPublisher(IConfiguration configuration)
+        public RabbitMQPublisher()
         {
-            _configuration = configuration;
+            var factory = new ConnectionFactory() { HostName = "localhost" };
+            try 
+            {
+                _connection = factory.CreateConnection();
+                _channel = _connection.CreateModel();
+            }
+            catch
+            {
+                _connection = null;
+                _channel = null;
+            }
         }
 
-        public Task PublishAsync<T>(string exchange, string routingKey, T message)
+        public void Publish<T>(T message, string queueName)
         {
-            var factory = new ConnectionFactory
-            {
-                HostName = _configuration["MessageQueue:RabbitMQ:HostName"] ?? "localhost",
-                Port = int.Parse(_configuration["MessageQueue:RabbitMQ:Port"] ?? "5672"),
-                UserName = _configuration["MessageQueue:RabbitMQ:UserName"] ?? "guest",
-                Password = _configuration["MessageQueue:RabbitMQ:Password"] ?? "guest"
-            };
+            if (_channel == null) return;
 
-            using var connection = factory.CreateConnection();
-            using var channel = connection.CreateModel();
-
-            // Se exchange for vazio, usa Default Exchange (envio direto p/ fila)
-            if (!string.IsNullOrEmpty(exchange))
-            {
-                channel.ExchangeDeclare(exchange, ExchangeType.Direct, durable: true);
-            }
+            _channel.QueueDeclare(queue: queueName,
+                                 durable: false,
+                                 exclusive: false,
+                                 autoDelete: false,
+                                 arguments: null);
 
             var json = JsonSerializer.Serialize(message);
             var body = Encoding.UTF8.GetBytes(json);
 
-            var properties = channel.CreateBasicProperties();
-            properties.Persistent = true;
-
-            channel.BasicPublish(
-                exchange: exchange ?? "",
-                routingKey: routingKey,
-                basicProperties: properties,
-                body: body);
-
-            return Task.CompletedTask;
+            _channel.BasicPublish(exchange: "",
+                                 routingKey: queueName,
+                                 basicProperties: null,
+                                 body: body);
         }
     }
 }
