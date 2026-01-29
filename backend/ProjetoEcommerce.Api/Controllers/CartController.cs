@@ -9,8 +9,8 @@ using System.Threading.Tasks;
 namespace ProjetoEcommerce.Api.Controllers
 {
     [ApiController]
-    [Route("api/cart")] // Define a rota fixa para evitar confusão
-    [Authorize] // Exige login (Token)
+    [Route("api/cart")] // Rota fixa correta
+    [Authorize]
     public class CartController : ControllerBase
     {
         private readonly ICartService _cartService;
@@ -29,7 +29,7 @@ namespace ProjetoEcommerce.Api.Controllers
             return Ok(cart);
         }
 
-        // POST: api/cart
+        // POST: api/cart (Adicionar Item)
         [HttpPost]
         public async Task<IActionResult> AddItem([FromBody] AddToCartRequest request)
         {
@@ -38,7 +38,7 @@ namespace ProjetoEcommerce.Api.Controllers
             return Ok(cart);
         }
 
-        // PUT: api/cart/item
+        // PUT: api/cart/item (Atualizar Qtd)
         [HttpPut("item")]
         public async Task<IActionResult> UpdateQuantity([FromBody] UpdateQuantityRequest request)
         {
@@ -47,18 +47,17 @@ namespace ProjetoEcommerce.Api.Controllers
             return Ok(cart);
         }
 
-        // DELETE: api/cart/{productId}
+        // DELETE: api/cart/{productId} (Remover Item)
         [HttpDelete("{productId}")]
         public async Task<IActionResult> RemoveItem(Guid productId)
         {
             var userId = GetUserId();
             await _cartService.RemoveFromCartAsync(userId, productId);
-            // Retorna o carrinho atualizado para o front não precisar recarregar tudo
             var cart = await _cartService.GetCartAsync(userId);
             return Ok(cart);
         }
 
-        // DELETE: api/cart
+        // DELETE: api/cart (Limpar Carrinho)
         [HttpDelete]
         public async Task<IActionResult> ClearCart()
         {
@@ -67,7 +66,6 @@ namespace ProjetoEcommerce.Api.Controllers
             return NoContent();
         }
 
-        // Método auxiliar para pegar ID do token
         private Guid GetUserId()
         {
             var claim = User.FindFirst(ClaimTypes.NameIdentifier);
