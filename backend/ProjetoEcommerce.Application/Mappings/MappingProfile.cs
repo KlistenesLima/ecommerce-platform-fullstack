@@ -43,7 +43,9 @@ namespace ProjetoEcommerce.Application.Mappings
                 .ForMember(dest => dest.Total, opt => opt.MapFrom(src => src.UnitPrice * src.Quantity));
 
             // Orders
-            CreateMap<Order, OrderResponse>();
+            CreateMap<Order, OrderResponse>()
+                .ForMember(dest => dest.OrderDate, opt => opt.MapFrom(src => src.CreatedAt));
+
             CreateMap<OrderItem, OrderItemResponse>();
 
             // Shippings
