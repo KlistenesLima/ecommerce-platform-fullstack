@@ -12,6 +12,7 @@ namespace ProjetoEcommerce.Application.Orders.Services
         Task<OrderResponse> CreateOrderAsync(Guid userId, CreateOrderRequest request);
         Task<OrderResponse> GetOrderByIdAsync(Guid id);
         Task<IEnumerable<OrderResponse>> GetUserOrdersAsync(Guid userId);
+        Task<IEnumerable<OrderResponse>> GetAllOrdersAsync();
         Task<OrderResponse> UpdateOrderStatusAsync(Guid orderId, OrderStatus status);
     }
 }
