@@ -20,6 +20,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\ProjetoEcommerce.Application\ProjetoEcommerce.Application.csproj" />
 		<ProjectReference Include="..\ProjetoEcommerce.Infra.IoC\ProjetoEcommerce.Infra.IoC.csproj" />
+		<ProjectReference Include="..\ProjetoEcommerce.Domain\ProjetoEcommerce.Domain.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

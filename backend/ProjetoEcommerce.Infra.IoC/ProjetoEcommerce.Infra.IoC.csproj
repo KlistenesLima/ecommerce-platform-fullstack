@@ -17,6 +17,7 @@
   <ItemGroup>
     <ProjectReference Include="..\ProjetoEcommerce.Application\ProjetoEcommerce.Application.csproj" />
     <ProjectReference Include="..\ProjetoEcommerce.Domain\ProjetoEcommerce.Domain.csproj" />
+    <ProjectReference Include="..\ProjetoEcommerce.Infra.Cloud\ProjetoEcommerce.Infra.Cloud.csproj" />
     <ProjectReference Include="..\ProjetoEcommerce.Infra.Data\ProjetoEcommerce.Infra.Data.csproj" />
   </ItemGroup>
 
