@@ -106,6 +106,12 @@ namespace ProjetoEcommerce.Application.Orders.Services
             return _mapper.Map<IEnumerable<OrderResponse>>(orders);
         }
 
+        public async Task<IEnumerable<OrderResponse>> GetAllOrdersAsync()
+        {
+            var orders = await _orderRepository.GetAllAsync();
+            return _mapper.Map<IEnumerable<OrderResponse>>(orders);
+        }
+
         public async Task<OrderResponse> UpdateOrderStatusAsync(Guid orderId, OrderStatus status)
         {
             var order = await _orderRepository.GetByIdAsync(orderId);
